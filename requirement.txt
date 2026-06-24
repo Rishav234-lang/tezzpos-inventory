@@ -1,0 +1,559 @@
+here i want to create a Tezzpos Inventory management with FLutter application and backend with Node.js
+Fastify
+Prisma
+PostgreSQL
+JWT
+
+
+# Inventory & Billing Management System (V1)
+so check properly then create proper here use proer indexing and optimized api's and fast and sacalable application, like here at least 10k  with 10k+ products handle easily and use smoothly so make proper,
+here also make proper backend and application so make one by one.
+
+
+
+
+Platform Side (TezzPOS)
+
+Only 1 role:
+
+Super Admin
+
+Can:
+
+Create Company
+Approve Company
+Suspend Company
+Activate Company
+Change Plan
+View All Companies
+View Company Details
+View Subscription Status
+Reset Password
+Login As Company 
+
+
+## 1. User Management
+Company Side
+
+Only 1 user:
+
+Owner
+
+The Owner has access to everything:
+
+Dashboard
+Products
+Inventory
+Vendors
+Purchases
+Customers
+Sales
+Returns
+Payments
+Reports
+Settings
+
+No role management.
+
+No user management.
+
+No permissions.
+
+### Features
+
+* Login
+* Logout
+* Change Password
+
+
+---
+
+# 2. Vendor Management
+
+### Purpose
+
+Manage supplier information and purchase records.
+
+### Vendor Details
+
+* Vendor Name
+* Mobile Number
+* GST Number
+* Email
+* Address
+
+### Features
+
+* Add Vendor
+* Edit Vendor
+* Delete Vendor
+* Vendor Search
+* Vendor Purchase History
+* Vendor Ledger
+* Outstanding Balance Tracking
+
+---
+
+# 3. Product Management
+
+### Purpose
+
+Maintain product catalog.
+
+### Product Details
+
+* Product Name
+* SKU / Barcode
+* Category
+* Unit
+* Selling Price (MRP)
+* Minimum Stock Level
+
+### Features
+
+* Add Product
+* Edit Product
+* Delete Product
+* Search Product
+* Barcode Support
+* Product Status (Active / Inactive)
+
+---
+
+# 4. Purchase Management
+
+### Purpose
+
+Record stock purchases from vendors.
+
+### Purchase Entry
+
+* Purchase Invoice Number
+* Purchase Date
+* Vendor
+* Product
+* Quantity
+* Purchase Price
+* MRP
+* Expiry Date
+* Total Amount
+* Paid Amount
+* Balance Amount
+* Status (Paid / Partial / Unpaid)
+
+### Features
+
+* Multiple Products per Invoice
+* Purchase Return
+* Invoice Search
+* Purchase History
+* Vendor-wise Purchases
+
+---
+
+# 5. Batch Management
+
+### Purpose
+
+Track stock batches automatically.
+
+### Batch Details
+
+* Batch Number (Auto Generated)
+* Product
+* Vendor
+* Purchase Invoice
+* Purchase Date
+* Purchase Price
+* MRP
+* Expiry Date
+* Purchased Quantity
+* Available Quantity
+* Status
+
+### Features
+
+* Auto Batch Creation
+* New Batch For Every Purchase
+* Batch-wise Stock Tracking
+* Batch History
+* Batch Search
+
+### Stock Flow
+
+* Every Purchase Creates New Batch
+* Sales Deduct Stock Using FIFO Method
+
+---
+
+# 6. Inventory Management
+
+### Purpose
+
+Manage available stock.
+
+### Features
+
+* Current Stock View
+* Batch-wise Stock View
+* Stock Adjustment
+* Stock History
+* Low Stock Alert
+* Expiry Alert
+* Near Expiry Products
+* Inventory Valuation
+
+### Inventory Statistics
+
+* Total Products
+* Total Stock Quantity
+* Inventory Value
+* Low Stock Count
+
+---
+
+# 7. Customer Management
+
+### Purpose
+
+Manage customer information and sales records.
+
+### Customer Details
+
+* Customer Name
+* Mobile Number
+* GST Number
+* Email
+* Address
+
+### Features
+
+* Add Customer
+* Edit Customer
+* Customer Search
+* Sales History
+* Customer Ledger
+* Outstanding Balance
+
+---
+
+# 8. Sales & Billing
+
+### Purpose
+
+Generate invoices and manage sales.
+
+### Sales Invoice
+
+* Invoice Number
+* Invoice Date
+* Customer
+* Product
+* Quantity
+* Selling Price
+* Discount
+* Tax
+* Total Amount
+* Payment Method
+
+### Features
+
+* GST Invoice
+* Credit Sale
+* Invoice Reprint
+* PDF Invoice
+* Sales History
+* FIFO Stock Deduction
+* Multiple Products Per Invoice
+
+---
+
+# 9. Sales Return & Refund
+
+### Purpose
+
+Handle returned products.
+
+### Return Details
+
+* Return Number
+* Original Invoice
+* Customer
+* Product
+* Quantity
+* Reason
+
+### Features
+
+* Full Return
+* Partial Return
+* Refund Entry
+* Stock Restoration
+* Return History
+
+---
+
+# 10. Payment Management
+
+### Purpose
+
+Track incoming and outgoing payments.
+
+### Customer Payments
+
+* Payment Date
+* Customer
+* Amount
+* Payment Method
+* Notes
+
+### Vendor Payments
+
+* Payment Date
+* Vendor
+* Amount
+* Payment Method
+* Notes
+
+### Payment Methods
+
+* Cash
+* UPI
+* Card
+* Bank Transfer
+
+### Features
+
+* Receive Payment
+* Make Payment
+* Payment History
+* Outstanding Tracking
+
+---
+
+# 11. Reports
+
+## Purchase Reports
+
+* Vendor Wise
+* Product Wise
+* Date Wise
+
+## Sales Reports
+
+* Customer Wise
+* Product Wise
+* Daily Sales
+* Monthly Sales
+
+## Inventory Reports
+
+* Current Stock
+* Batch-wise Stock
+* Low Stock Report
+* Expiry Report
+
+## Financial Reports
+
+* Customer Outstanding
+* Vendor Outstanding
+* Profit Summary
+
+---
+
+# 12. Dashboard
+
+## Statistics Cards
+
+* Total Products
+* Total Vendors
+* Total Customers
+* Inventory Value
+* Today's Sales
+* Monthly Sales
+* Pending Receivables
+* Pending Payables
+
+## Quick Overview
+
+* Low Stock Products
+* Near Expiry Products
+* Recent Purchases
+* Recent Sales
+* Outstanding Customers
+* Outstanding Vendors
+
+## Charts
+
+* Daily Sales
+* Monthly Sales
+* Purchase Trend
+* Top Selling Products
+
+13. Subscription & Billing Management
+Purpose
+
+Manage company subscriptions, plans, renewals, and automatic payments.
+
+Super Admin Controls
+
+Super Admin can:
+
+Create Plans
+Edit Plans
+Activate/Deactivate Plans
+Assign Plan to Company
+Change Company Plan
+Set Custom Pricing per Company
+Extend Trial Period
+Suspend Subscription
+View Payment History
+Plan Management
+Plan Fields
+Plan Name
+Monthly Price
+Yearly Price
+Description
+Status (Active / Inactive)
+Example
+Plan	Price
+Starter	₹199/month
+Business	₹499/month
+Enterprise	₹999/month
+Company Subscription
+Fields
+Company
+Plan
+Billing Cycle (Monthly / Yearly)
+Start Date
+End Date
+Auto Renewal
+Status
+Status
+Trial
+Active
+Expired
+Suspended
+Custom Company Pricing
+
+Super Admin can override default plan pricing.
+
+Example:
+
+Company	Plan	Default Price	Custom Price
+ABC Store	Business	₹499	₹399
+XYZ Pharma	Business	₹499	₹499
+
+This allows special pricing for individual customers.
+
+Razorpay Integration
+Features
+Subscription Purchase
+Plan Upgrade
+Plan Downgrade
+Renewal Payment
+Payment History
+Webhook Processing
+Razorpay AutoPay
+
+Use Razorpay Subscriptions.
+
+Flow
+Company selects plan.
+Razorpay subscription is created.
+Customer authorizes AutoPay (UPI, Card, Net Banking).
+Razorpay automatically deducts payment on renewal date.
+Webhook updates subscription status in TezzPOS.
+Subscription Tables
+plans
+id
+name
+monthly_price
+yearly_price
+description
+status
+company_subscriptions
+id
+company_id
+plan_id
+
+custom_price
+
+billing_cycle
+
+start_date
+end_date
+
+razorpay_subscription_id
+
+auto_renew
+
+status
+subscription_payments
+id
+company_id
+subscription_id
+
+amount
+
+payment_date
+
+razorpay_payment_id
+
+status
+Auto Suspension Logic
+Example
+Plan Expiry = 30 Jul
+
+Renewal Failed
+
+Grace Period = 7 Days
+
+After grace period:
+
+Company Status = Suspended
+
+Suspended company:
+
+Cannot create sales
+Cannot create purchases
+Cannot access dashboard
+Can only access subscription payment screen
+Dashboard (Super Admin)
+Statistics
+Total Companies
+Active Companies
+Trial Companies
+Suspended Companies
+Monthly Revenue
+Annual Revenue
+Expiring Subscriptions
+Company View
+Company	Plan	Renewal Date	Status
+ABC Store	Business	15 Jul	Active
+XYZ Pharma	Starter	20 Jul	Trial
+Rana Hardware	Business	05 Jul	Suspended
+
+Actions:
+
+View Company
+Change Plan
+Override Price
+Suspend
+Activate
+Extend Subscription
+Recommended V1
+
+Keep it simple:
+
+✅ Super Admin manages plans
+
+✅ Super Admin assigns plans to companies
+
+✅ Razorpay AutoPay subscriptions
+
+✅ Custom company pricing support
+
+✅ Automatic renewal
+
+✅ Automatic suspension after expiry/grace period

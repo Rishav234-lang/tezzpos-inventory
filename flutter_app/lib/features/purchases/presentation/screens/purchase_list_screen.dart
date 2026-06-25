@@ -138,7 +138,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
 
         actions: [
           IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refresh', onPressed: () => ref.invalidate(purchaseListProvider(_currentParams))),
-          FilledButton.icon(onPressed: () => context.go('/purchases/add'), icon: const Icon(Icons.add, size: 18), label: const Text('New Purchase')),
+          FilledButton.icon(onPressed: () => context.push('/purchases/add'), icon: const Icon(Icons.add, size: 18), label: const Text('New Purchase')),
           const SizedBox(width: 16),
         ],
 
@@ -166,7 +166,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
 
               actionLabel: 'New Purchase',
 
-              onAction: () => context.go('/purchases/add'),
+              onAction: () => context.push('/purchases/add'),
 
             );
 
@@ -207,7 +207,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
 
                     return ListTile(
 
-                      onTap: () => context.go('/purchases/${p['id']}'),
+                      onTap: () => context.push('/purchases/${p['id']}'),
 
                       leading: CircleAvatar(
 
@@ -262,7 +262,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
                           PopupMenuButton<String>(
 
                             onSelected: (value) {
-                              if (value == 'view') context.go('/purchases/${p['id']}');
+                              if (value == 'view') context.push('/purchases/${p['id']}');
                               if (value == 'pay' && balance > 0) _showQuickPayment(context, p['id'], balance, totalAmt, paidAmt);
                               if (value == 'status') _showStatusUpdate(context, p['id'], status);
                             },

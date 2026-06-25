@@ -64,7 +64,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen> with Si
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit Vendor',
-            onPressed: () => context.go('/vendors/${widget.vendorId}/edit'),
+            onPressed: () => context.push('/vendors/${widget.vendorId}/edit'),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -103,7 +103,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen> with Si
           controller: _tabController,
           children: [
             _OverviewTab(vendor: vendor, vendorId: widget.vendorId),
-            _PurchasesTab(vendorId: widget.vendorId, onToPurchase: (id) => context.go('/purchases/$id')),
+            _PurchasesTab(vendorId: widget.vendorId, onToPurchase: (id) => context.push('/purchases/$id')),
             _LedgerTab(vendorId: widget.vendorId),
           ],
         ),

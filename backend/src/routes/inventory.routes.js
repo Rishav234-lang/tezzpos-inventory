@@ -9,10 +9,12 @@ async function inventoryRoutes(fastify) {
   fastify.get('/stock', async (request, reply) => {
     try {
       const { page, limit, skip } = getPaginationParams(request.query);
-      const { search, categoryId, lowStock } = request.query;
+      const { search, categoryId, lowStock, status } = request.query;
       const companyId = request.user.companyId;
 
-      const where = { companyId, status: 'ACTIVE' };
+      const where = { companyId };
+      if (status) where.status = status;
+      else where.status = 'ACTIVE';
       if (categoryId) where.categoryId = categoryId;
       if (search) {
         where.OR = [
@@ -273,10 +275,15 @@ async function inventoryRoutes(fastify) {
       });
       const lowStockCount = products.filter((p) => {
         const stock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
-        return stock <= p.minStockLevel;
+        return stock > 0 && stock <= p.minStockLevel;
       }).length;
 
-      return { totalProducts, totalStockQuantity, inventoryValue, lowStockCount };
+      const outOfStockCount = products.filter((p) => {
+        const stock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
+        return stock === 0;
+      }).length;
+
+      return { totalProducts, totalStockQuantity, inventoryValue, lowStockCount, outOfStockCount };
     } catch (error) {
       handleError(reply, error);
     }

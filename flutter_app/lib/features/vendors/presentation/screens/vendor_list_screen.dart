@@ -149,7 +149,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
         actions: [
           IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refresh', onPressed: () => ref.invalidate(vendorListProvider(_currentParams))),
           FilledButton.icon(
-            onPressed: () => context.go('/vendors/add'),
+            onPressed: () => context.push('/vendors/add'),
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Add Vendor'),
           ),
@@ -216,7 +216,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
 
                     actionLabel: 'Add Vendor',
 
-                    onAction: () => context.go('/vendors/add'),
+                    onAction: () => context.push('/vendors/add'),
 
                   );
 
@@ -299,7 +299,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
 
                                   ),
 
-                                IconButton(icon: const Icon(Icons.edit_outlined, size: 18), tooltip: 'Edit', onPressed: () => context.go('/vendors/${v['id']}/edit')),
+                                IconButton(icon: const Icon(Icons.edit_outlined, size: 18), tooltip: 'Edit', onPressed: () => context.push('/vendors/${v['id']}/edit')),
 
                                 IconButton(icon: Icon(Icons.delete_outline, size: 18, color: Colors.red.shade400), tooltip: 'Delete', onPressed: () => _deleteVendor(v['id'], v['name'])),
 
@@ -307,7 +307,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
 
                             ),
 
-                            onTap: () => context.go('/vendors/${v['id']}'),
+                            onTap: () => context.push('/vendors/${v['id']}'),
 
                           );
 

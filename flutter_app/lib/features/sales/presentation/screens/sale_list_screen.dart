@@ -138,7 +138,7 @@ class _SaleListScreenState extends ConsumerState<SaleListScreen> {
 
         actions: [
           IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refresh', onPressed: () => ref.invalidate(saleListProvider(_currentParams))),
-          FilledButton.icon(onPressed: () => context.go('/sales/add'), icon: const Icon(Icons.add, size: 18), label: const Text('New Sale')),
+          FilledButton.icon(onPressed: () => context.push('/sales/add'), icon: const Icon(Icons.add, size: 18), label: const Text('New Sale')),
           const SizedBox(width: 16),
         ],
 
@@ -166,7 +166,7 @@ class _SaleListScreenState extends ConsumerState<SaleListScreen> {
 
               actionLabel: 'New Sale',
 
-              onAction: () => context.go('/sales/add'),
+              onAction: () => context.push('/sales/add'),
 
             );
 
@@ -202,7 +202,7 @@ class _SaleListScreenState extends ConsumerState<SaleListScreen> {
                     final balance = totalAmt - paidAmt;
 
                     return ListTile(
-                      onTap: () => context.go('/sales/${s['id']}'),
+                      onTap: () => context.push('/sales/${s['id']}'),
                       leading: CircleAvatar(
                         backgroundColor: AppColors.primary.withOpacity(0.1),
                         child: const Icon(Icons.point_of_sale_outlined, size: 20, color: AppColors.primary),
@@ -230,10 +230,10 @@ class _SaleListScreenState extends ConsumerState<SaleListScreen> {
                           ),
                           PopupMenuButton<String>(
                             onSelected: (value) {
-                              if (value == 'view') context.go('/sales/${s['id']}');
+                              if (value == 'view') context.push('/sales/${s['id']}');
                               if (value == 'pay' && balance > 0) _showQuickPayment(context, s['id'], balance, totalAmt, paidAmt);
                               if (value == 'status') _showStatusUpdate(context, s['id'], status);
-                              if (value == 'invoice') context.go('/sales/${s['id']}');
+                              if (value == 'invoice') context.push('/sales/${s['id']}');
                             },
                             itemBuilder: (ctx) => [
                               const PopupMenuItem(value: 'view', child: Row(children: [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('View Details')])),

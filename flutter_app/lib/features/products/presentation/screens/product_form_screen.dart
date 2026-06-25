@@ -69,7 +69,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Product' : 'Add Product')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Product' : 'Add Product'),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(

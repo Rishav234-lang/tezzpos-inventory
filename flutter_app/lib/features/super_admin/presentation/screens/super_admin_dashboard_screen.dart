@@ -313,7 +313,7 @@ class _RecentCompaniesCard extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(8),
-                        onTap: () => context.go('/super-admin/companies/${c['id']}'),
+                        onTap: () => context.push('/super-admin/companies/${c['id']}'),
                         child: Row(
                           children: [
                             CircleAvatar(

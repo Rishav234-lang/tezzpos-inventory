@@ -78,7 +78,10 @@ class _VendorFormScreenState extends ConsumerState<VendorFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Vendor' : 'Add Vendor')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Vendor' : 'Add Vendor'),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(

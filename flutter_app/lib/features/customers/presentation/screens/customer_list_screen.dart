@@ -140,7 +140,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
         actions: [
           IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refresh', onPressed: () => ref.invalidate(customerListProvider(_currentParams))),
-          FilledButton.icon(onPressed: () => context.go('/customers/add'), icon: const Icon(Icons.add, size: 18), label: const Text('Add Customer')),
+          FilledButton.icon(onPressed: () => context.push('/customers/add'), icon: const Icon(Icons.add, size: 18), label: const Text('Add Customer')),
           const SizedBox(width: 16),
         ],
 
@@ -204,7 +204,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
                     actionLabel: 'Add Customer',
 
-                    onAction: () => context.go('/customers/add'),
+                    onAction: () => context.push('/customers/add'),
 
                   );
 
@@ -279,7 +279,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
                                   ),
 
-                                IconButton(icon: const Icon(Icons.edit_outlined, size: 18), tooltip: 'Edit', onPressed: () => context.go('/customers/${c['id']}/edit')),
+                                IconButton(icon: const Icon(Icons.edit_outlined, size: 18), tooltip: 'Edit', onPressed: () => context.push('/customers/${c['id']}/edit')),
 
                                 IconButton(icon: Icon(Icons.delete_outline, size: 18, color: Colors.red.shade400), tooltip: 'Delete', onPressed: () => _deleteCustomer(c['id'], c['name'])),
 
@@ -287,7 +287,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
                             ),
 
-                            onTap: () => context.go('/customers/${c['id']}'),
+                            onTap: () => context.push('/customers/${c['id']}'),
 
                           );
 

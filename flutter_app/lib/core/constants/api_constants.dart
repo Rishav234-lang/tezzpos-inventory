@@ -49,6 +49,7 @@ class ApiConstants {
   static const String dashboardRecentSales = '/dashboard/recent-sales';
   static const String dashboardRecentPurchases = '/dashboard/recent-purchases';
   static const String dashboardDailySales = '/dashboard/charts/daily-sales';
+  static const String dashboardDailyPurchases = '/dashboard/charts/daily-purchases';
   static const String dashboardTopProducts = '/dashboard/charts/top-products';
   
   // Reports

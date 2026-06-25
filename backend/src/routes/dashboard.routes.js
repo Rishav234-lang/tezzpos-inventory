@@ -8,11 +8,15 @@ async function dashboardRoutes(fastify) {
   fastify.get('/', async (request, reply) => {
     try {
       const companyId = request.user.companyId;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+
+      // Use UTC-based dates so Prisma comparisons are reliable
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
       const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+
+      fastify.log.info(`[Dashboard] companyId=${companyId} today=${today.toISOString()} tomorrow=${tomorrow.toISOString()} monthStart=${monthStart.toISOString()}`);
 
       const [
         totalProducts,
@@ -20,6 +24,8 @@ async function dashboardRoutes(fastify) {
         totalCustomers,
         todaySales,
         monthlySales,
+        todayPurchases,
+        monthlyPurchases,
         pendingReceivables,
         pendingPayables,
       ] = await Promise.all([
@@ -36,6 +42,14 @@ async function dashboardRoutes(fastify) {
           _sum: { totalAmount: true },
           _count: { id: true },
         }),
+        fastify.prisma.purchase.aggregate({
+          where: { companyId, purchaseDate: { gte: today, lt: tomorrow } },
+          _sum: { totalAmount: true },
+        }),
+        fastify.prisma.purchase.aggregate({
+          where: { companyId, purchaseDate: { gte: monthStart } },
+          _sum: { totalAmount: true },
+        }),
         fastify.prisma.sale.aggregate({
           where: { companyId, status: { in: ['UNPAID', 'PARTIAL'] } },
           _sum: { balanceAmount: true },
@@ -46,11 +60,44 @@ async function dashboardRoutes(fastify) {
         }),
       ]);
 
-      // Inventory value
-      const activeBatches = await fastify.prisma.batch.findMany({
-        where: { companyId, status: 'ACTIVE', availableQuantity: { gt: 0 } },
-        select: { availableQuantity: true, purchasePrice: true },
+      fastify.log.info(`[Dashboard] Results for ${companyId}: products=${totalProducts} vendors=${totalVendors} customers=${totalCustomers} todaySales=${JSON.stringify(todaySales)} monthlySales=${JSON.stringify(monthlySales)} todayPurchases=${JSON.stringify(todayPurchases)}`);
+
+      // Expiring soon count
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      const expiringSoonCount = await fastify.prisma.batch.count({
+        where: {
+          companyId,
+          status: 'ACTIVE',
+          availableQuantity: { gt: 0 },
+          expiryDate: { lte: futureDate, gte: new Date() },
+        },
       });
+
+      // Inventory value + low stock count (batch-level stock vs product minStockLevel)
+      const [activeBatches, stockByProduct, allActiveProducts] = await Promise.all([
+        fastify.prisma.batch.findMany({
+          where: { companyId, status: 'ACTIVE', availableQuantity: { gt: 0 } },
+          select: { availableQuantity: true, purchasePrice: true },
+        }),
+        fastify.prisma.batch.groupBy({
+          by: ['productId'],
+          where: { companyId, status: 'ACTIVE' },
+          _sum: { availableQuantity: true },
+        }),
+        fastify.prisma.product.findMany({
+          where: { companyId, status: 'ACTIVE' },
+          select: { id: true, minStockLevel: true },
+        }),
+      ]);
+
+      const stockMap = Object.fromEntries(
+        stockByProduct.map((r) => [r.productId, r._sum.availableQuantity ?? 0])
+      );
+      const lowStockCount = allActiveProducts.filter(
+        (p) => (stockMap[p.id] ?? 0) <= (p.minStockLevel ?? 0)
+      ).length;
+
       const inventoryValue = activeBatches.reduce(
         (sum, b) => sum + b.availableQuantity * Number(b.purchasePrice),
         0
@@ -66,8 +113,14 @@ async function dashboardRoutes(fastify) {
           todaySalesCount: todaySales._count.id,
           monthlySales: Number(monthlySales._sum.totalAmount || 0),
           monthlySalesCount: monthlySales._count.id,
+          todayPurchases: Number(todayPurchases._sum.totalAmount || 0),
+          monthlyPurchases: Number(monthlyPurchases._sum.totalAmount || 0),
+          grossProfit: Number(monthlySales._sum.totalAmount || 0) - Number(monthlyPurchases._sum.totalAmount || 0),
           pendingReceivables: Number(pendingReceivables._sum.balanceAmount || 0),
           pendingPayables: Number(pendingPayables._sum.balanceAmount || 0),
+          expiringSoonCount,
+          lowStockCount,
+          todaySalesTarget: 100000,
         },
       };
     } catch (error) {
@@ -147,14 +200,18 @@ async function dashboardRoutes(fastify) {
   fastify.get('/charts/daily-sales', async (request, reply) => {
     try {
       const companyId = request.user.companyId;
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const now = new Date();
+      const thirtyDaysAgo = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - 30));
+
+      fastify.log.info(`[Chart/daily-sales] companyId=${companyId} thirtyDaysAgo=${thirtyDaysAgo.toISOString()}`);
 
       const sales = await fastify.prisma.sale.findMany({
         where: { companyId, invoiceDate: { gte: thirtyDaysAgo } },
         select: { invoiceDate: true, totalAmount: true },
         orderBy: { invoiceDate: 'asc' },
       });
+
+      fastify.log.info(`[Chart/daily-sales] Found ${sales.length} sales for ${companyId}`);
 
       const dailyMap = {};
       for (let i = 0; i < 30; i++) {
@@ -168,6 +225,45 @@ async function dashboardRoutes(fastify) {
         const key = s.invoiceDate.toISOString().split('T')[0];
         if (dailyMap[key]) {
           dailyMap[key].amount += Number(s.totalAmount);
+          dailyMap[key].count += 1;
+        }
+      });
+
+      return Object.values(dailyMap);
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // Daily Purchase Chart (last 30 days)
+  fastify.get('/charts/daily-purchases', async (request, reply) => {
+    try {
+      const companyId = request.user.companyId;
+      const now = new Date();
+      const thirtyDaysAgo = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - 30));
+
+      fastify.log.info(`[Chart/daily-purchases] companyId=${companyId} thirtyDaysAgo=${thirtyDaysAgo.toISOString()}`);
+
+      const purchases = await fastify.prisma.purchase.findMany({
+        where: { companyId, purchaseDate: { gte: thirtyDaysAgo } },
+        select: { purchaseDate: true, totalAmount: true },
+        orderBy: { purchaseDate: 'asc' },
+      });
+
+      fastify.log.info(`[Chart/daily-purchases] Found ${purchases.length} purchases for ${companyId}`);
+
+      const dailyMap = {};
+      for (let i = 0; i < 30; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - 29 + i);
+        const key = date.toISOString().split('T')[0];
+        dailyMap[key] = { date: key, amount: 0, count: 0 };
+      }
+
+      purchases.forEach((p) => {
+        const key = p.purchaseDate.toISOString().split('T')[0];
+        if (dailyMap[key]) {
+          dailyMap[key].amount += Number(p.totalAmount);
           dailyMap[key].count += 1;
         }
       });

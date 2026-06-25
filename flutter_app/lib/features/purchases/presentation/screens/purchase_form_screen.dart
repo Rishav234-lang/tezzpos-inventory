@@ -103,7 +103,7 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Purchase'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/purchases')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

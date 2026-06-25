@@ -64,7 +64,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> wit
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit Customer',
-            onPressed: () => context.go('/customers/${widget.customerId}/edit'),
+            onPressed: () => context.push('/customers/${widget.customerId}/edit'),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -103,7 +103,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> wit
           controller: _tabController,
           children: [
             _OverviewTab(customer: customer, customerId: widget.customerId),
-            _SalesTab(customerId: widget.customerId, onToSale: (id) => context.go('/sales/$id')),
+            _SalesTab(customerId: widget.customerId, onToSale: (id) => context.push('/sales/$id')),
             _LedgerTab(customerId: widget.customerId),
           ],
         ),

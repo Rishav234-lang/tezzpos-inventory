@@ -125,13 +125,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with SingleTicker
           provider: outstandingCustomersProvider,
           isCustomer: true,
           onPay: (id, name, outstanding) => _showPayDialog(entityId: id, name: name, outstanding: outstanding, isCustomer: true),
-          onNavigate: (id) => context.go('/customers/$id'),
+          onNavigate: (id) => context.push('/customers/$id'),
         ),
         _OutstandingListTab(
           provider: outstandingVendorsProvider,
           isCustomer: false,
           onPay: (id, name, outstanding) => _showPayDialog(entityId: id, name: name, outstanding: outstanding, isCustomer: false),
-          onNavigate: (id) => context.go('/vendors/$id'),
+          onNavigate: (id) => context.push('/vendors/$id'),
         ),
       ]),
     );

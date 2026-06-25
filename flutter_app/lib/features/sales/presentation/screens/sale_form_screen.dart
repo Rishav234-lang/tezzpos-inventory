@@ -91,7 +91,7 @@ class _SaleFormScreenState extends ConsumerState<SaleFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Sale'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/sales')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

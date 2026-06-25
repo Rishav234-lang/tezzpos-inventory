@@ -26,7 +26,7 @@ class SuperAdminCompanyDetailScreen extends ConsumerWidget {
         title: const Text('Company Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/super-admin/companies'),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(

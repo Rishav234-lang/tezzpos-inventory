@@ -61,7 +61,10 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Customer' : 'Add Customer')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Customer' : 'Add Customer'),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(

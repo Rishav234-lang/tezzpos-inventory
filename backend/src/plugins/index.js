@@ -101,8 +101,9 @@ const registerPlugins = async (app) => {
           select: { status: true, endDate: true },
         });
 
+        // No subscription = grace period / trial mode, allow access
         if (!subscription) {
-          reply.status(403).send({ error: 'No active subscription found' });
+          subscriptionCache.set(companyId, { status: 'TRIAL', expiresAt: now + CACHE_TTL_MS });
           return;
         }
 

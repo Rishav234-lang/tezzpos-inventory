@@ -109,7 +109,7 @@ async function vendorRoutes(fastify) {
       const [purchases, total] = await Promise.all([
         fastify.prisma.purchase.findMany({
           where,
-          include: { items: { include: { product: { select: { name: true } } } } },
+          include: { items: { include: { product: { select: { name: true, sku: true } } } }, batches: { select: { batchNumber: true, expiryDate: true, availableQuantity: true } } },
           skip,
           take: limit,
           orderBy: { purchaseDate: 'desc' },
@@ -142,7 +142,7 @@ async function vendorRoutes(fastify) {
       ]);
 
       const totalPurchaseAmount = purchases.reduce((sum, p) => sum + Number(p.totalAmount), 0);
-      const totalPaidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalPaidAmount = purchases.reduce((sum, p) => sum + Number(p.paidAmount), 0);
       const outstandingBalance = totalPurchaseAmount - totalPaidAmount;
 
       return { purchases, payments, totalPurchaseAmount, totalPaidAmount, outstandingBalance };

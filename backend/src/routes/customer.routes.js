@@ -142,7 +142,7 @@ async function customerRoutes(fastify) {
       ]);
 
       const totalSalesAmount = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-      const totalPaidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalPaidAmount = sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
       const outstandingBalance = totalSalesAmount - totalPaidAmount;
 
       return { sales, payments, totalSalesAmount, totalPaidAmount, outstandingBalance };

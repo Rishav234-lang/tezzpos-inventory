@@ -52,6 +52,7 @@ async function superAdminRoutes(fastify) {
   fastify.post('/companies', async (request, reply) => {
     try {
       const data = companySchema.parse(request.body);
+      console.log('[DEBUG] Create company request:', { name: data.name, email: data.email, ownerEmail: data.ownerEmail });
 
       const existingCompany = await fastify.prisma.company.findUnique({ where: { email: data.email } });
       if (existingCompany) throw new ValidationError('Company email already exists');
@@ -80,8 +81,10 @@ async function superAdminRoutes(fastify) {
         include: { owner: { select: { id: true, name: true, email: true } } },
       });
 
+      console.log('[DEBUG] Company created:', company.id, 'Owner:', company.owner);
       return reply.status(201).send(company);
     } catch (error) {
+      console.log('[DEBUG] Company creation error:', error.message);
       handleError(reply, error);
     }
   });
@@ -116,6 +119,41 @@ async function superAdminRoutes(fastify) {
       ]);
 
       return createPaginatedResponse(companies, total, page, limit);
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // Update Company
+  fastify.put('/companies/:id', async (request, reply) => {
+    try {
+      const { name, email, phone, address, gstNumber, ownerName, ownerEmail } = request.body;
+      const company = await fastify.prisma.company.update({
+        where: { id: request.params.id },
+        data: {
+          ...(name != null && { name }),
+          ...(email != null && { email }),
+          ...(phone !== undefined && { phone }),
+          ...(address !== undefined && { address }),
+          ...(gstNumber !== undefined && { gstNumber }),
+        },
+        include: { owner: { select: { id: true, name: true, email: true } } },
+      });
+      if (ownerName != null || ownerEmail != null) {
+        const owner = await fastify.prisma.owner.findUnique({
+          where: { companyId: request.params.id },
+        });
+        if (owner) {
+          await fastify.prisma.owner.update({
+            where: { id: owner.id },
+            data: {
+              ...(ownerName != null && { name: ownerName }),
+              ...(ownerEmail != null && { email: ownerEmail }),
+            },
+          });
+        }
+      }
+      return company;
     } catch (error) {
       handleError(reply, error);
     }

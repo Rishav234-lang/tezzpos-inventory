@@ -30,19 +30,29 @@ async function authRoutes(fastify) {
   fastify.post('/login', async (request, reply) => {
     try {
       const { email, password } = loginSchema.parse(request.body);
+      console.log('[DEBUG] Owner login attempt:', email);
 
       const owner = await fastify.prisma.owner.findUnique({
         where: { email },
         include: { company: true },
       });
-      if (!owner) throw new UnauthorizedError('Invalid credentials');
+      if (!owner) {
+        console.log('[DEBUG] Owner not found for email:', email);
+        throw new UnauthorizedError('Invalid credentials');
+      }
+      console.log('[DEBUG] Owner found:', owner.id, 'Company status:', owner.company.status);
 
       if (owner.company.status === 'PENDING') {
+        console.log('[DEBUG] Company is PENDING');
         throw new UnauthorizedError('Company is pending approval');
       }
 
       const valid = await bcrypt.compare(password, owner.password);
-      if (!valid) throw new UnauthorizedError('Invalid credentials');
+      if (!valid) {
+        console.log('[DEBUG] Password mismatch for owner:', owner.id);
+        throw new UnauthorizedError('Invalid credentials');
+      }
+      console.log('[DEBUG] Owner login successful:', owner.id);
 
       const token = fastify.jwt.sign({
         id: owner.id,

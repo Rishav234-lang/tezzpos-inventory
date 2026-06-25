@@ -38,13 +38,13 @@ const purchaseItemSchema = z.object({
   quantity: z.number().int().positive(),
   purchasePrice: z.number().positive(),
   mrp: z.number().positive(),
-  expiryDate: z.string().datetime().optional().nullable(),
+  expiryDate: z.string().optional().nullable(),
 });
 
 const purchaseSchema = z.object({
   vendorId: z.string(),
   invoiceNumber: z.string().min(1),
-  purchaseDate: z.string().datetime(),
+  purchaseDate: z.string(),
   paidAmount: z.number().min(0).default(0),
   notes: z.string().optional().nullable(),
   items: z.array(purchaseItemSchema).min(1),
@@ -70,7 +70,7 @@ const saleItemSchema = z.object({
 
 const saleSchema = z.object({
   customerId: z.string().optional().nullable(),
-  invoiceDate: z.string().datetime(),
+  invoiceDate: z.string().optional().nullable().or(z.literal('')),
   discount: z.number().min(0).default(0),
   taxAmount: z.number().min(0).default(0),
   paidAmount: z.number().min(0).default(0),
@@ -88,7 +88,7 @@ const saleReturnItemSchema = z.object({
 
 const saleReturnSchema = z.object({
   saleId: z.string(),
-  returnDate: z.string().datetime(),
+  returnDate: z.string(),
   reason: z.string().optional().nullable(),
   refundAmount: z.number().min(0).default(0),
   items: z.array(saleReturnItemSchema).min(1),
@@ -98,7 +98,7 @@ const saleReturnSchema = z.object({
 const customerPaymentSchema = z.object({
   customerId: z.string(),
   amount: z.number().positive(),
-  paymentDate: z.string().datetime(),
+  paymentDate: z.string(),
   paymentMethod: z.enum(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER']),
   notes: z.string().optional().nullable(),
 });
@@ -106,7 +106,7 @@ const customerPaymentSchema = z.object({
 const vendorPaymentSchema = z.object({
   vendorId: z.string(),
   amount: z.number().positive(),
-  paymentDate: z.string().datetime(),
+  paymentDate: z.string(),
   paymentMethod: z.enum(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER']),
   notes: z.string().optional().nullable(),
 });

@@ -38,6 +38,7 @@ class ApiConstants {
   static const String inventoryStock = '/inventory/stock';
   static const String inventoryBatches = '/inventory/batches';
   static const String inventoryAdjust = '/inventory/adjust';
+  static const String inventoryAdjustments = '/inventory/adjustments';
   static const String inventoryLowStock = '/inventory/low-stock';
   static const String inventoryNearExpiry = '/inventory/near-expiry';
   static const String inventoryStats = '/inventory/stats';
@@ -74,4 +75,10 @@ class ApiConstants {
   static const String superAdminDashboard = '/super-admin/dashboard';
   static const String superAdminCompanies = '/super-admin/companies';
   static const String superAdminPlans = '/super-admin/plans';
+
+  static String superAdminCompanyDetail(String id) => '/super-admin/companies/$id';
+  static String superAdminCompanyAction(String id, String action) => '/super-admin/companies/$id/$action';
+  static String superAdminCompanyPlan(String id) => '/super-admin/companies/$id/plan';
+  static String superAdminLoginAs(String id) => '/super-admin/companies/$id/login-as';
+  static String superAdminCompanyResetPassword(String id) => '/super-admin/companies/$id/reset-password';
 }

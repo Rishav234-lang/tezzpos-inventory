@@ -141,6 +141,41 @@ async function purchaseRoutes(fastify) {
     }
   });
 
+  // Update Purchase Status/Payment
+  fastify.patch('/:id', async (request, reply) => {
+    try {
+      const { paidAmount, status, notes } = request.body;
+      const companyId = request.user.companyId;
+
+      const existing = await fastify.prisma.purchase.findFirst({
+        where: { id: request.params.id, companyId },
+      });
+      if (!existing) throw new NotFoundError('Purchase');
+
+      const newPaid = paidAmount !== undefined ? Number(paidAmount) : existing.paidAmount;
+      const newStatus = status || (newPaid >= existing.totalAmount ? 'PAID' : newPaid > 0 ? 'PARTIAL' : 'UNPAID');
+      const newBalance = existing.totalAmount - newPaid;
+
+      const updated = await fastify.prisma.purchase.update({
+        where: { id: request.params.id },
+        data: {
+          paidAmount: newPaid,
+          status: newStatus,
+          balanceAmount: newBalance,
+          notes: notes !== undefined ? notes : existing.notes,
+        },
+        include: {
+          vendor: true,
+          items: { include: { product: { select: { id: true, name: true, sku: true } } } },
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
   // Search Purchases by Invoice Number
   fastify.get('/search/:invoiceNumber', async (request, reply) => {
     try {

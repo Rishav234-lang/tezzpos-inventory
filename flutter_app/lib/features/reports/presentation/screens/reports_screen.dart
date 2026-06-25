@@ -38,7 +38,7 @@ final _reportTypes = [
   ]),
 ];
 
-final reportDataProvider = FutureProvider.autoDispose.family<dynamic, Map<String, String>>((ref, params) async {
+final reportDataProvider = FutureProvider.family<dynamic, Map<String, String>>((ref, params) async {
   final api = ref.read(apiClientProvider);
   final endpoint = params['endpoint']!;
   final queryParams = Map<String, String>.from(params)..remove('endpoint');
@@ -56,6 +56,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   int _selectedType = 0;
   int _selectedSub = 0;
   DateTimeRange? _dateRange;
+  Map<String, String> _currentParams = {'endpoint': ''};
+
+  void _updateParams() {
+    final sub = _reportTypes[_selectedType].subReports[_selectedSub];
+    _currentParams = {'endpoint': sub.endpoint};
+    if (_dateRange != null) {
+      _currentParams['startDate'] = _dateRange!.start.toIso8601String();
+      _currentParams['endDate'] = _dateRange!.end.toIso8601String();
+    }
+  }
+
+  @override
+  void initState() { super.initState(); _updateParams(); }
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +112,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 leading: Icon(_reportTypes[i].icon, size: 20, color: _selectedType == i ? AppColors.primary : null),
                 title: Text(_reportTypes[i].label, style: TextStyle(fontWeight: _selectedType == i ? FontWeight.w600 : FontWeight.normal, fontSize: 13)),
                 selected: _selectedType == i,
-                onTap: () => setState(() { _selectedType = i; _selectedSub = 0; }),
+                onTap: () => setState(() { _selectedType = i; _selectedSub = 0; _updateParams(); }),
               ),
               if (_selectedType == i)
                 for (int j = 0; j < _reportTypes[i].subReports.length; j++)
@@ -109,7 +122,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       dense: true,
                       title: Text(_reportTypes[i].subReports[j].label, style: TextStyle(fontSize: 12, fontWeight: _selectedSub == j ? FontWeight.w600 : FontWeight.normal)),
                       selected: _selectedSub == j,
-                      onTap: () => setState(() => _selectedSub = j),
+                      onTap: () => setState(() { _selectedSub = j; _updateParams(); }),
                     ),
                   ),
             ],
@@ -131,7 +144,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               child: ChoiceChip(
                 label: Text(_reportTypes[i].label),
                 selected: _selectedType == i,
-                onSelected: (_) => setState(() { _selectedType = i; _selectedSub = 0; }),
+                onSelected: (_) => setState(() { _selectedType = i; _selectedSub = 0; _updateParams(); }),
               ),
             ),
           const SizedBox(width: 8),
@@ -141,7 +154,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               child: FilterChip(
                 label: Text(_reportTypes[_selectedType].subReports[j].label),
                 selected: _selectedSub == j,
-                onSelected: (_) => setState(() => _selectedSub = j),
+                onSelected: (_) => setState(() { _selectedSub = j; _updateParams(); }),
               ),
             ),
         ],
@@ -150,16 +163,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   Widget _buildContent(_SubReport sub) {
-    final params = <String, String>{'endpoint': sub.endpoint};
-    if (_dateRange != null) {
-      params['startDate'] = _dateRange!.start.toIso8601String();
-      params['endDate'] = _dateRange!.end.toIso8601String();
-    }
-    final dataAsync = ref.watch(reportDataProvider(params));
+    final dataAsync = ref.watch(reportDataProvider(_currentParams));
 
     return dataAsync.when(
       loading: () => const AppLoading(),
-      error: (err, _) => AppErrorWidget(message: err.toString(), onRetry: () => ref.invalidate(reportDataProvider)),
+      error: (err, _) => AppErrorWidget(message: err.toString(), onRetry: () => ref.invalidate(reportDataProvider(_currentParams))),
       data: (data) {
         if (data == null) return const AppEmptyState(message: 'No data for this report', icon: Icons.assessment_outlined);
         if (data is List) return _buildDataTable(data);
@@ -228,7 +236,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       lastDate: DateTime.now(),
       initialDateRange: _dateRange ?? DateTimeRange(start: DateTime.now().subtract(const Duration(days: 30)), end: DateTime.now()),
     );
-    if (range != null) setState(() => _dateRange = range);
+    if (range != null) setState(() { _dateRange = range; _updateParams(); });
   }
 
   Future<void> _exportCsv(String endpoint) async {

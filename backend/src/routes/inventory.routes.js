@@ -78,6 +78,16 @@ async function inventoryRoutes(fastify) {
       if (productId) where.productId = productId;
       if (status) where.status = status;
 
+      const { sortBy, sortOrder } = request.query;
+      const orderBy = {};
+      if (sortBy === 'expiryDate') {
+        orderBy[sortBy] = sortOrder || 'asc';
+      } else if (sortBy === 'purchasePrice') {
+        orderBy[sortBy] = sortOrder || 'asc';
+      } else {
+        orderBy.purchaseDate = 'desc';
+      }
+
       const [batches, total] = await Promise.all([
         fastify.prisma.batch.findMany({
           where,
@@ -87,7 +97,7 @@ async function inventoryRoutes(fastify) {
           },
           skip,
           take: limit,
-          orderBy: { purchaseDate: 'desc' },
+          orderBy,
         }),
         fastify.prisma.batch.count({ where }),
       ]);

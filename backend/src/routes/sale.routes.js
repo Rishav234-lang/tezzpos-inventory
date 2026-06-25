@@ -116,7 +116,7 @@ async function saleRoutes(fastify) {
             companyId,
             customerId:    data.customerId,
             invoiceNumber,
-            invoiceDate:   new Date(data.invoiceDate),
+            invoiceDate:   data.invoiceDate ? new Date(data.invoiceDate) : new Date(),
             subtotal,
             discount:      saleLevelDiscount,
             taxAmount:     totalTax,
@@ -178,6 +178,41 @@ async function saleRoutes(fastify) {
       ]);
 
       return createPaginatedResponse(sales, total, page, limit);
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // Update Sale Payment/Status
+  fastify.patch('/:id', async (request, reply) => {
+    try {
+      const { paidAmount, status, notes } = request.body;
+      const companyId = request.user.companyId;
+
+      const existing = await fastify.prisma.sale.findFirst({
+        where: { id: request.params.id, companyId },
+      });
+      if (!existing) throw new NotFoundError('Sale');
+
+      const newPaid = paidAmount !== undefined ? Number(paidAmount) : existing.paidAmount;
+      const newStatus = status || (newPaid >= existing.totalAmount ? 'PAID' : newPaid > 0 ? 'PARTIAL' : 'UNPAID');
+      const newBalance = existing.totalAmount - newPaid;
+
+      const updated = await fastify.prisma.sale.update({
+        where: { id: request.params.id },
+        data: {
+          paidAmount: newPaid,
+          status: newStatus,
+          balanceAmount: newBalance,
+          notes: notes !== undefined ? notes : existing.notes,
+        },
+        include: {
+          customer: true,
+          items: { include: { product: { select: { id: true, name: true, sku: true, barcode: true } }, batch: { select: { id: true, batchNumber: true } } } },
+        },
+      });
+
+      return updated;
     } catch (error) {
       handleError(reply, error);
     }

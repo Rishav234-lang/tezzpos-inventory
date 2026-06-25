@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class _NavItem {
   final String label;
@@ -11,7 +12,7 @@ class _NavItem {
   const _NavItem(this.label, this.icon, this.activeIcon, this.route);
 }
 
-const _navItems = [
+const _ownerNavItems = [
   _NavItem('Dashboard', Icons.dashboard_outlined, Icons.dashboard, '/dashboard'),
   _NavItem('Products', Icons.shopping_bag_outlined, Icons.shopping_bag, '/products'),
   _NavItem('Vendors', Icons.people_outlined, Icons.people, '/vendors'),
@@ -24,53 +25,66 @@ const _navItems = [
   _NavItem('Settings', Icons.settings_outlined, Icons.settings, '/settings'),
 ];
 
+const _superAdminNavItems = [
+  _NavItem('Dashboard', Icons.dashboard_outlined, Icons.dashboard, '/super-admin/dashboard'),
+  _NavItem('Companies', Icons.business_outlined, Icons.business, '/super-admin/companies'),
+  _NavItem('Plans', Icons.workspace_premium_outlined, Icons.workspace_premium, '/super-admin/plans'),
+  _NavItem('Settings', Icons.settings_outlined, Icons.settings, '/settings'),
+];
+
 class AppShell extends ConsumerWidget {
   final Widget child;
   const AppShell({super.key, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authUser = ref.watch(authStateProvider).valueOrNull;
+    final isSuperAdmin = authUser?.role == 'super_admin';
+    final navItems = isSuperAdmin ? _superAdminNavItems : _ownerNavItems;
     final currentRoute = GoRouterState.of(context).matchedLocation;
-    final selectedIndex = _getSelectedIndex(currentRoute);
+    final selectedIndex = _getSelectedIndex(currentRoute, navItems);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Mobile: < 600
         if (constraints.maxWidth < 600) {
           return _MobileShell(
             selectedIndex: selectedIndex,
+            navItems: navItems,
             child: child,
             onLogout: () => _logout(ref, context),
+            isSuperAdmin: isSuperAdmin,
           );
         }
-        // Tablet: 600-1100
         if (constraints.maxWidth < 1100) {
           return _TabletShell(
             selectedIndex: selectedIndex,
+            navItems: navItems,
             child: child,
             onLogout: () => _logout(ref, context),
           );
         }
-        // Desktop: >= 1100
         return _DesktopShell(
           selectedIndex: selectedIndex,
+          navItems: navItems,
           child: child,
           onLogout: () => _logout(ref, context),
-          userName: ref.watch(authStateProvider).valueOrNull?.name ?? '',
+          userName: authUser?.name ?? '',
+          userRole: isSuperAdmin ? 'Super Admin' : 'Owner',
+          isSuperAdmin: isSuperAdmin,
         );
       },
     );
   }
 
-  static int _getSelectedIndex(String route) {
-    for (int i = 0; i < _navItems.length; i++) {
-      if (route.startsWith(_navItems[i].route)) return i;
+  static int _getSelectedIndex(String route, List<_NavItem> navItems) {
+    for (int i = 0; i < navItems.length; i++) {
+      if (route.startsWith(navItems[i].route)) return i;
     }
     return 0;
   }
 
-  static void _navigate(BuildContext context, int index) {
-    context.go(_navItems[index].route);
+  static void _navigate(BuildContext context, int index, List<_NavItem> navItems) {
+    context.go(navItems[index].route);
   }
 
   static Future<void> _logout(WidgetRef ref, BuildContext context) async {
@@ -92,18 +106,19 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-// ─── Mobile: Bottom Navigation ──────────────────────────────────────
 class _MobileShell extends StatelessWidget {
   final int selectedIndex;
+  final List<_NavItem> navItems;
   final Widget child;
   final VoidCallback onLogout;
+  final bool isSuperAdmin;
 
-  const _MobileShell({required this.selectedIndex, required this.child, required this.onLogout});
+  const _MobileShell({required this.selectedIndex, required this.navItems, required this.child, required this.onLogout, required this.isSuperAdmin});
 
   @override
   Widget build(BuildContext context) {
-    // Show only first 5 items in bottom nav, rest in drawer
-    final bottomIndex = selectedIndex < 5 ? selectedIndex : 0;
+    final bottomItems = navItems.take(isSuperAdmin ? 3 : 5).toList();
+    final bottomIndex = selectedIndex < bottomItems.length ? selectedIndex : 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -115,6 +130,16 @@ class _MobileShell extends StatelessWidget {
           ],
         ),
         actions: [
+          if (isSuperAdmin)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text('Super Admin', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+            ),
           IconButton(icon: const Icon(Icons.logout_outlined), onPressed: onLogout),
         ],
       ),
@@ -135,7 +160,7 @@ class _MobileShell extends StatelessWidget {
               const Divider(),
               Expanded(
                 child: ListView(
-                  children: _navItems.asMap().entries.map((e) {
+                  children: navItems.asMap().entries.map((e) {
                     final i = e.key;
                     final item = e.value;
                     return ListTile(
@@ -144,7 +169,7 @@ class _MobileShell extends StatelessWidget {
                       selected: i == selectedIndex,
                       onTap: () {
                         Navigator.pop(context);
-                        AppShell._navigate(context, i);
+                        AppShell._navigate(context, i, navItems);
                       },
                     );
                   }).toList(),
@@ -157,10 +182,10 @@ class _MobileShell extends StatelessWidget {
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: bottomIndex,
-        onDestinationSelected: (i) => AppShell._navigate(context, i),
+        onDestinationSelected: (i) => AppShell._navigate(context, i, navItems),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 65,
-        destinations: _navItems.take(5).map((item) => NavigationDestination(
+        destinations: bottomItems.map((item) => NavigationDestination(
           icon: Icon(item.icon, size: 22),
           selectedIcon: Icon(item.activeIcon, size: 22),
           label: item.label,
@@ -170,13 +195,13 @@ class _MobileShell extends StatelessWidget {
   }
 }
 
-// ─── Tablet: NavigationRail ─────────────────────────────────────────
 class _TabletShell extends StatelessWidget {
   final int selectedIndex;
+  final List<_NavItem> navItems;
   final Widget child;
   final VoidCallback onLogout;
 
-  const _TabletShell({required this.selectedIndex, required this.child, required this.onLogout});
+  const _TabletShell({required this.selectedIndex, required this.navItems, required this.child, required this.onLogout});
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +210,7 @@ class _TabletShell extends StatelessWidget {
         children: [
           NavigationRail(
             selectedIndex: selectedIndex,
-            onDestinationSelected: (i) => AppShell._navigate(context, i),
+            onDestinationSelected: (i) => AppShell._navigate(context, i, navItems),
             labelType: NavigationRailLabelType.selected,
             backgroundColor: Theme.of(context).colorScheme.surface,
             leading: Padding(
@@ -205,7 +230,7 @@ class _TabletShell extends StatelessWidget {
                 ),
               ),
             ),
-            destinations: _navItems.map((item) => NavigationRailDestination(
+            destinations: navItems.map((item) => NavigationRailDestination(
               icon: Icon(item.icon),
               selectedIcon: Icon(item.activeIcon),
               label: Text(item.label, style: const TextStyle(fontSize: 11)),
@@ -219,14 +244,16 @@ class _TabletShell extends StatelessWidget {
   }
 }
 
-// ─── Desktop: Full Sidebar ──────────────────────────────────────────
 class _DesktopShell extends StatelessWidget {
   final int selectedIndex;
+  final List<_NavItem> navItems;
   final Widget child;
   final VoidCallback onLogout;
   final String userName;
+  final String userRole;
+  final bool isSuperAdmin;
 
-  const _DesktopShell({required this.selectedIndex, required this.child, required this.onLogout, required this.userName});
+  const _DesktopShell({required this.selectedIndex, required this.navItems, required this.child, required this.onLogout, required this.userName, required this.userRole, required this.isSuperAdmin});
 
   @override
   Widget build(BuildContext context) {
@@ -235,13 +262,11 @@ class _DesktopShell extends StatelessWidget {
     return Scaffold(
       body: Row(
         children: [
-          // Full sidebar
           Container(
             width: 240,
             color: theme.colorScheme.surface,
             child: Column(
               children: [
-                // Logo
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                   child: Row(
@@ -254,16 +279,33 @@ class _DesktopShell extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('Inventory Management', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                  child: Row(
+                    children: [
+                      Text(
+                        isSuperAdmin ? 'Super Admin Panel' : 'Inventory Management',
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      ),
+                      if (isSuperAdmin) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('SA', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 const SizedBox(height: 8),
-                // Nav items
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    children: _navItems.asMap().entries.map((e) {
+                    children: navItems.asMap().entries.map((e) {
                       final i = e.key;
                       final item = e.value;
                       final isSelected = i == selectedIndex;
@@ -274,7 +316,7 @@ class _DesktopShell extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(10),
-                            onTap: () => AppShell._navigate(context, i),
+                            onTap: () => AppShell._navigate(context, i, navItems),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                               child: Row(
@@ -303,14 +345,15 @@ class _DesktopShell extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 1),
-                // User & Logout
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
+                        backgroundColor: isSuperAdmin
+                            ? AppColors.primary.withOpacity(0.15)
+                            : theme.colorScheme.primary.withOpacity(0.15),
                         child: Text(
                           userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.primary),
@@ -318,10 +361,17 @@ class _DesktopShell extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          userName.isNotEmpty ? userName : 'User',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              userName.isNotEmpty ? userName : 'User',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(userRole, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                          ],
                         ),
                       ),
                       IconButton(

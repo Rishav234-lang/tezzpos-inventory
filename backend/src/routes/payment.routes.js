@@ -130,10 +130,7 @@ async function paymentRoutes(fastify) {
           name: true,
           mobile: true,
           sales: {
-            select: { totalAmount: true },
-          },
-          payments: {
-            select: { amount: true },
+            select: { totalAmount: true, paidAmount: true, status: true, invoiceNumber: true },
           },
         },
       });
@@ -141,9 +138,10 @@ async function paymentRoutes(fastify) {
       const outstandingCustomers = customers
         .map((c) => {
           const totalSales = c.sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-          const totalPaid = c.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const totalPaid = c.sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
           const outstanding = totalSales - totalPaid;
-          return { id: c.id, name: c.name, mobile: c.mobile, totalSales, totalPaid, outstanding };
+          const unpaidInvoices = c.sales.filter(s => s.status !== 'PAID').map(s => ({ invoiceNumber: s.invoiceNumber, totalAmount: Number(s.totalAmount), paidAmount: Number(s.paidAmount) }));
+          return { id: c.id, name: c.name, mobile: c.mobile, totalSales, totalPaid, outstanding, unpaidInvoices };
         })
         .filter((c) => c.outstanding > 0)
         .sort((a, b) => b.outstanding - a.outstanding);
@@ -166,10 +164,7 @@ async function paymentRoutes(fastify) {
           name: true,
           mobile: true,
           purchases: {
-            select: { totalAmount: true },
-          },
-          payments: {
-            select: { amount: true },
+            select: { totalAmount: true, paidAmount: true, status: true, invoiceNumber: true },
           },
         },
       });
@@ -177,9 +172,10 @@ async function paymentRoutes(fastify) {
       const outstandingVendors = vendors
         .map((v) => {
           const totalPurchases = v.purchases.reduce((sum, p) => sum + Number(p.totalAmount), 0);
-          const totalPaid = v.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const totalPaid = v.purchases.reduce((sum, p) => sum + Number(p.paidAmount), 0);
           const outstanding = totalPurchases - totalPaid;
-          return { id: v.id, name: v.name, mobile: v.mobile, totalPurchases, totalPaid, outstanding };
+          const unpaidInvoices = v.purchases.filter(p => p.status !== 'PAID').map(p => ({ invoiceNumber: p.invoiceNumber, totalAmount: Number(p.totalAmount), paidAmount: Number(p.paidAmount) }));
+          return { id: v.id, name: v.name, mobile: v.mobile, totalPurchases, totalPaid, outstanding, unpaidInvoices };
         })
         .filter((v) => v.outstanding > 0)
         .sort((a, b) => b.outstanding - a.outstanding);

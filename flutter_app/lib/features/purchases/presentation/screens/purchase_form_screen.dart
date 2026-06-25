@@ -78,7 +78,7 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
       await api.post(ApiConstants.purchases, data: {
         'vendorId': _selectedVendorId,
         'invoiceNumber': _invoiceController.text.trim(),
-        'purchaseDate': _purchaseDate.toIso8601String(),
+        'purchaseDate': _purchaseDate.toUtc().toIso8601String(),
         'paidAmount': double.tryParse(_paidAmountController.text) ?? 0,
         'items': _items.map((i) => i.toJson()).toList(),
       });
@@ -416,7 +416,7 @@ class _AddItemDialogState extends State<_AddItemDialog> {
               quantity: qty,
               purchasePrice: price,
               mrp: mrp,
-              expiryDate: _expiryDate?.toIso8601String(),
+              expiryDate: _expiryDate?.toUtc().toIso8601String(),
             ));
             Navigator.pop(context);
           },

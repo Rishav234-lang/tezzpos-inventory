@@ -6,14 +6,19 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tezzpos_inventory/main.dart';
 
 void main() {
-  testWidgets('App renders without error', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: TezzPOSApp()));
+  testWidgets('App renders without errors', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: TezzPOSApp(),
+      ),
+    );
+
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

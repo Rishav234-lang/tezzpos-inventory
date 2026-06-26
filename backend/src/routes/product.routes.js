@@ -66,11 +66,11 @@ async function productRoutes(fastify) {
     }
   });
 
-  // Get All Products (optimized with cursor-based pagination option)
+  // Get All Products
   fastify.get('/', async (request, reply) => {
     try {
       const { page, limit, skip } = getPaginationParams(request.query);
-      const { search, categoryId, status } = request.query;
+      const { search, categoryId, status, stockFilter } = request.query;
       const companyId = request.user.companyId;
 
       const where = { companyId };
@@ -84,18 +84,65 @@ async function productRoutes(fastify) {
         ];
       }
 
-      const [products, total] = await Promise.all([
-        fastify.prisma.product.findMany({
-          where,
-          include: { category: { select: { id: true, name: true } } },
-          skip,
-          take: limit,
-          orderBy: { name: 'asc' },
-        }),
-        fastify.prisma.product.count({ where }),
-      ]);
+      let finalProducts;
+      let finalTotal;
 
-      return createPaginatedResponse(products, total, page, limit);
+      if (stockFilter === 'LOW' || stockFilter === 'OUT_OF_STOCK') {
+        // Fetch all matching products (no pagination) so we can filter by computed stock
+        const allProducts = await fastify.prisma.product.findMany({
+          where,
+          include: {
+            category: { select: { id: true, name: true } },
+            batches: {
+              where: { status: 'ACTIVE' },
+              select: { availableQuantity: true, purchasePrice: true },
+              orderBy: { purchaseDate: 'desc' },
+            },
+          },
+          orderBy: { name: 'asc' },
+        });
+
+        const enriched = allProducts.map((p) => {
+          const totalStock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
+          const latestPurchasePrice = p.batches.length > 0 ? Number(p.batches[0].purchasePrice) : 0;
+          return { ...p, totalStock, purchasePrice: latestPurchasePrice, batches: undefined };
+        });
+
+        const filtered = stockFilter === 'LOW'
+          ? enriched.filter((p) => p.totalStock > 0 && p.totalStock <= p.minStockLevel)
+          : enriched.filter((p) => p.totalStock === 0);
+
+        finalTotal = filtered.length;
+        finalProducts = filtered.slice(skip, skip + limit);
+      } else {
+        // Normal pagination when no stock filter
+        const [products, total] = await Promise.all([
+          fastify.prisma.product.findMany({
+            where,
+            include: {
+              category: { select: { id: true, name: true } },
+              batches: {
+                where: { status: 'ACTIVE' },
+                select: { availableQuantity: true, purchasePrice: true },
+                orderBy: { purchaseDate: 'desc' },
+              },
+            },
+            skip,
+            take: limit,
+            orderBy: { name: 'asc' },
+          }),
+          fastify.prisma.product.count({ where }),
+        ]);
+
+        finalTotal = total;
+        finalProducts = products.map((p) => {
+          const totalStock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
+          const latestPurchasePrice = p.batches.length > 0 ? Number(p.batches[0].purchasePrice) : 0;
+          return { ...p, totalStock, purchasePrice: latestPurchasePrice, batches: undefined };
+        });
+      }
+
+      return createPaginatedResponse(finalProducts, finalTotal, page, limit);
     } catch (error) {
       handleError(reply, error);
     }

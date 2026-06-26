@@ -2,6 +2,7 @@ const authRoutes = require('./auth.routes');
 const superAdminRoutes = require('./super-admin.routes');
 const companyRoutes = require('./company.routes');
 const vendorRoutes = require('./vendor.routes');
+const categoryRoutes = require('./category.routes');
 const productRoutes = require('./product.routes');
 const purchaseRoutes = require('./purchase.routes');
 const customerRoutes = require('./customer.routes');
@@ -21,6 +22,7 @@ const registerRoutes = async (app) => {
   app.register(superAdminRoutes, { prefix: '/api/super-admin' });
   app.register(companyRoutes, { prefix: '/api/companies' });
   app.register(vendorRoutes, { prefix: '/api/vendors' });
+  app.register(categoryRoutes, { prefix: '/api/categories' });
   app.register(productRoutes, { prefix: '/api/products' });
   app.register(purchaseRoutes, { prefix: '/api/purchases' });
   app.register(customerRoutes, { prefix: '/api/customers' });

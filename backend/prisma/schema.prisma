@@ -128,17 +128,21 @@ model SubscriptionPayment {
 // ==================== COMPANY MODELS ====================
 
 model Category {
-  id        String   @id @default(cuid())
-  companyId String   @map("company_id")
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String        @id @default(cuid())
+  companyId   String        @map("company_id")
+  name        String
+  description String?
+  imageUrl    String?       @map("image_url")
+  status      CategoryStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
 
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products Product[]
 
   @@unique([companyId, name])
   @@index([companyId])
+  @@index([companyId, status])
   @@map("categories")
 }
 
@@ -501,6 +505,11 @@ enum PaymentStatus {
 }
 
 enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CategoryStatus {
   ACTIVE
   INACTIVE
 }

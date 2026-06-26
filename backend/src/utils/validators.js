@@ -135,6 +135,9 @@ const companySchema = z.object({
 // Category validators
 const categorySchema = z.object({
   name: z.string().min(1).max(100),
+  description: z.string().max(500).optional().nullable(),
+  imageUrl: z.string().url().optional().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE'),
 });
 
 module.exports = {

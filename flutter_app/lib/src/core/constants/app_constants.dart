@@ -6,6 +6,10 @@ class AppRoutes {
   static const String superAdminLogin = '/super-admin-login';
   static const String forgotPassword = '/forgot-password';
   static const String dashboard = '/dashboard';
+  static const String categories = '/categories';
+  static const String categoryDetail = '/categories/detail';
+  static const String addCategory = '/categories/add';
+  static const String editCategory = '/categories/edit';
 }
 
 class AppStrings {

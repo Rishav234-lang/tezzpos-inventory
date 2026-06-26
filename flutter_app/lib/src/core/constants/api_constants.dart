@@ -35,7 +35,9 @@ class ApiConstants {
 
   // Products
   static const String products = '/api/products';
-  static const String categories = '/api/products/categories';
+
+  // Categories
+  static const String categories = '/api/categories';
 
   // Sales
   static const String sales = '/api/sales';

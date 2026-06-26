@@ -7,6 +7,9 @@ import '../features/auth/presentation/screens/choose_role_screen.dart';
 import '../features/auth/presentation/screens/company_login_screen.dart';
 import '../features/auth/presentation/screens/super_admin_login_screen.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../features/category/presentation/screens/add_edit_category_screen.dart';
+import '../features/category/presentation/screens/categories_screen.dart';
+import '../features/category/presentation/screens/category_detail_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
@@ -83,6 +86,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.dashboard,
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.categories,
+        builder: (context, state) => const CategoriesScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.categoryDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CategoryDetailScreen(categoryId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.addCategory,
+        builder: (context, state) => const AddEditCategoryScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editCategory}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditCategoryScreen(categoryId: id);
+        },
       ),
     ],
   );

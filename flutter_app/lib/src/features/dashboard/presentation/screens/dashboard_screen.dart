@@ -411,7 +411,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _NavItem(icon: Icons.home, label: 'Dashboard', index: 0, selectedIndex: _selectedNavIndex, onTap: (i) => setState(() => _selectedNavIndex = i)),
-          _NavItem(icon: Icons.inventory_2, label: 'Products', index: 1, selectedIndex: _selectedNavIndex, onTap: (i) => setState(() => _selectedNavIndex = i)),
+          _NavItem(icon: Icons.inventory_2, label: 'Products', index: 1, selectedIndex: _selectedNavIndex, onTap: (i) {
+            setState(() => _selectedNavIndex = i);
+            context.push(AppRoutes.categories);
+          }),
           const SizedBox(width: 48), // space for FAB
           _NavItem(icon: Icons.bar_chart, label: 'Sales', index: 2, selectedIndex: _selectedNavIndex, onTap: (i) => setState(() => _selectedNavIndex = i)),
           _NavItem(icon: Icons.more_horiz, label: 'More', index: 3, selectedIndex: _selectedNavIndex, onTap: (i) {
@@ -456,9 +459,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 8),
+            _DrawerAction(icon: Icons.category, label: 'Categories', color: AppColors.primary, onTap: () => context.push(AppRoutes.categories)),
+            _DrawerAction(icon: Icons.inventory_2, label: 'Products', color: AppColors.success, onTap: () => _comingSoon(context)),
+            const Divider(),
             _DrawerAction(icon: Icons.add_shopping_cart, label: 'Add Sale', color: AppColors.primary, onTap: () => _comingSoon(context)),
             _DrawerAction(icon: Icons.shopping_basket, label: 'Add Purchase', color: AppColors.secondary, onTap: () => _comingSoon(context)),
-            _DrawerAction(icon: Icons.add_box, label: 'Add Product', color: AppColors.success, onTap: () => _comingSoon(context)),
             _DrawerAction(icon: Icons.download, label: 'Stock In', color: AppColors.info, onTap: () => _comingSoon(context)),
             _DrawerAction(icon: Icons.upload, label: 'Stock Out', color: AppColors.warning, onTap: () => _comingSoon(context)),
             const Divider(),
@@ -807,15 +812,14 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = index == selectedIndex;
-    return InkWell(
-      onTap: () => onTap(index),
-      child: SizedBox(
-        width: 70,
+    return Expanded(
+      child: InkWell(
+        onTap: () => onTap(index),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant, size: 24),
+            Icon(icon, color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant, size: 22),
             const SizedBox(height: 2),
             Text(
               label,
@@ -824,6 +828,8 @@ class _NavItem extends StatelessWidget {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 10,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ],
         ),

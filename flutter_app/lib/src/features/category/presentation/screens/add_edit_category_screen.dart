@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
-import '../../domain/entities/category.dart';
 import '../providers/category_providers.dart';
 
 class AddEditCategoryScreen extends ConsumerStatefulWidget {
@@ -23,6 +21,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   final _imageUrlController = TextEditingController();
   String _status = 'ACTIVE';
   bool _isLoading = false;
+  bool _controllersInitialized = false;
 
   bool get isEdit => widget.categoryId != null && widget.categoryId!.isNotEmpty;
 
@@ -30,19 +29,24 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   void initState() {
     super.initState();
     if (isEdit) {
-      _loadCategory();
+      // Schedule loading after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadCategory());
     }
   }
 
   void _loadCategory() {
     final categoryAsync = ref.read(categoryDetailProvider(widget.categoryId!));
-    if (categoryAsync.valueOrNull != null) {
-      final cat = categoryAsync.valueOrNull!;
-      _nameController.text = cat.name;
-      _descriptionController.text = cat.description ?? '';
-      _imageUrlController.text = cat.imageUrl ?? '';
-      _status = cat.status;
-    }
+    categoryAsync.whenData((cat) {
+      if (!_controllersInitialized && mounted) {
+        setState(() {
+          _nameController.text = cat.name;
+          _descriptionController.text = cat.description ?? '';
+          _imageUrlController.text = cat.imageUrl ?? '';
+          _status = cat.status;
+          _controllersInitialized = true;
+        });
+      }
+    });
   }
 
   @override
@@ -78,50 +82,73 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   Center(
                     child: GestureDetector(
                       onTap: () {},
-                      child: Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.outline.withValues(alpha: 0.3),
-                            style: BorderStyle.solid,
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppColors.outline.withValues(alpha: 0.3),
+                                style: BorderStyle.solid,
+                              ),
+                              image: _imageUrlController.text.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(_imageUrlController.text),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: _imageUrlController.text.isEmpty
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: 52,
+                                        height: 52,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.image,
+                                          color: AppColors.primary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'Upload Category Image',
+                                        style: context.textTheme.labelSmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'JPG, PNG up to 2MB',
+                                        style: context.textTheme.labelSmall?.copyWith(
+                                          color: AppColors.onSurfaceVariant,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : null,
                           ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
+                          if (_imageUrlController.text.isNotEmpty)
                             Container(
-                              width: 52,
-                              height: 52,
+                              margin: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color: AppColors.primary,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                Icons.image,
-                                color: AppColors.primary,
-                                size: 24,
-                              ),
+                              child: const Icon(Icons.edit, color: Colors.white, size: 14),
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Upload Category Image',
-                              style: context.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'JPG, PNG up to 2MB',
-                              style: context.textTheme.labelSmall?.copyWith(
-                                color: AppColors.onSurfaceVariant,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -263,12 +290,13 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
 
     setState(() => _isLoading = false);
 
+    if (!mounted) return;
     final notifierState = ref.read(categoryNotifierProvider);
-    if (notifierState.hasError && context.mounted) {
+    if (notifierState.hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${notifierState.error}')),
       );
-    } else if (context.mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(isEdit ? 'Category updated' : 'Category created')),
       );

@@ -33,3 +33,11 @@ class ValidationFailure extends Failure {
 class UnknownFailure extends Failure {
   const UnknownFailure({super.message = 'Something went wrong'});
 }
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure({required super.message});
+}
+
+class ConflictFailure extends Failure {
+  const ConflictFailure({required super.message});
+}

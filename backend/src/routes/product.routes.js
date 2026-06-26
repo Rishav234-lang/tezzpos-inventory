@@ -22,11 +22,76 @@ async function productRoutes(fastify) {
 
   fastify.get('/categories', async (request, reply) => {
     try {
+      const companyId = request.user.companyId;
       const categories = await fastify.prisma.category.findMany({
-        where: { companyId: request.user.companyId },
+        where: { companyId },
         orderBy: { name: 'asc' },
+        include: {
+          _count: { select: { products: true } },
+        },
       });
-      return categories;
+      // Flatten _count into itemCount for frontend
+      return categories.map((c) => ({
+        ...c,
+        itemCount: c._count.products,
+        _count: undefined,
+      }));
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  fastify.get('/categories/:id', async (request, reply) => {
+    try {
+      const companyId = request.user.companyId;
+      const category = await fastify.prisma.category.findFirst({
+        where: { id: request.params.id, companyId },
+        include: {
+          _count: { select: { products: true } },
+        },
+      });
+      if (!category) throw new NotFoundError('Category');
+      return {
+        ...category,
+        itemCount: category._count.products,
+        _count: undefined,
+      };
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  fastify.put('/categories/:id', async (request, reply) => {
+    try {
+      const companyId = request.user.companyId;
+      const data = categorySchema.partial().parse(request.body);
+      const category = await fastify.prisma.category.updateMany({
+        where: { id: request.params.id, companyId },
+        data,
+      });
+      if (category.count === 0) throw new NotFoundError('Category');
+      return { message: 'Category updated' };
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  fastify.delete('/categories/:id', async (request, reply) => {
+    try {
+      const companyId = request.user.companyId;
+      // Check if category has products
+      const productsCount = await fastify.prisma.product.count({
+        where: { categoryId: request.params.id, companyId },
+      });
+      if (productsCount > 0) {
+        return reply.status(409).send({
+          message: 'Cannot delete category with existing products. Please remove or reassign products first.',
+        });
+      }
+      await fastify.prisma.category.deleteMany({
+        where: { id: request.params.id, companyId },
+      });
+      return { message: 'Category deleted' };
     } catch (error) {
       handleError(reply, error);
     }

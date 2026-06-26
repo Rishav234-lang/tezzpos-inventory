@@ -124,37 +124,21 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   Widget _buildTitleBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Categories',
-                style: context.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Manage your product categories',
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-            ],
+          Text(
+            'Categories',
+            style: context.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          ElevatedButton.icon(
-            onPressed: () => context.push(AppRoutes.addCategory),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add Category'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          const SizedBox(height: 2),
+          Text(
+            'Manage your product categories',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
             ),
           ),
         ],
@@ -226,10 +210,58 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
   Widget _buildCategoryList(BuildContext context, List<Category> categories) {
     if (categories.isEmpty) {
-      return const SliverToBoxAdapter(
+      return SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Center(child: Text('No categories found')),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 60),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.category_outlined,
+                    color: AppColors.primary.withValues(alpha: 0.5),
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'No Categories Yet',
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create your first category to organize products',
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => context.push(AppRoutes.addCategory),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Category'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -249,14 +281,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   }
 }
 
-class _CategoryTile extends StatelessWidget {
+class _CategoryTile extends ConsumerWidget {
   final Category category;
   final VoidCallback onTap;
 
   const _CategoryTile({required this.category, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final iconColor = _categoryColor(category.name);
     final bgColor = iconColor.withValues(alpha: 0.1);
 
@@ -311,7 +343,7 @@ class _CategoryTile extends StatelessWidget {
               const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
               const SizedBox(width: 4),
               IconButton(
-                onPressed: () => _showOptions(context),
+                onPressed: () => _showOptions(context, ref),
                 icon: const Icon(Icons.more_vert, size: 20),
                 color: AppColors.onSurfaceVariant,
                 padding: EdgeInsets.zero,
@@ -324,7 +356,7 @@ class _CategoryTile extends StatelessWidget {
     );
   }
 
-  void _showOptions(BuildContext context) {
+  void _showOptions(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -349,7 +381,7 @@ class _CategoryTile extends StatelessWidget {
                 title: const Text('Delete Category'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _confirmDelete(context);
+                  _confirmDelete(context, ref);
                 },
               ),
             ],
@@ -359,7 +391,7 @@ class _CategoryTile extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -371,9 +403,15 @@ class _CategoryTile extends StatelessWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              // Delete handled via provider
+              await ref.read(categoryNotifierProvider.notifier).deleteCategory(category.id);
+              if (context.mounted) {
+                ref.invalidate(categoriesProvider(''));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Category deleted')),
+                );
+              }
             },
             child: const Text('Delete', style: TextStyle(color: AppColors.error)),
           ),

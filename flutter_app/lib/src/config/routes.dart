@@ -25,6 +25,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     initialLocation: AppRoutes.splash,
     redirect: (context, state) {
+      // Redirect /category to /categories
+      if (state.matchedLocation == '/category') {
+        return AppRoutes.categories;
+      }
+
       final isSplash = state.matchedLocation == AppRoutes.splash;
       final isOnboarding = state.matchedLocation == AppRoutes.onboarding;
       final isAuthRoute = state.matchedLocation == AppRoutes.chooseRole ||

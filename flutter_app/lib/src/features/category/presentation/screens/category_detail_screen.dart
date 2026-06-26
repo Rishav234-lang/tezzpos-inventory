@@ -29,7 +29,7 @@ class CategoryDetailScreen extends ConsumerWidget {
       bottomNavigationBar: categoryAsync.when(
         data: (category) => _buildBottomActions(context, ref, category),
         loading: () => null,
-        error: (_, __) => null,
+        error: (_, _) => null,
       ),
     );
   }

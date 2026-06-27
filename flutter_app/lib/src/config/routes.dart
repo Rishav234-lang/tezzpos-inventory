@@ -11,6 +11,12 @@ import '../features/category/presentation/screens/add_edit_category_screen.dart'
 import '../features/category/presentation/screens/categories_screen.dart';
 import '../features/category/presentation/screens/category_detail_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../features/product/presentation/screens/add_edit_product_screen.dart';
+import '../features/product/presentation/screens/product_detail_screen.dart';
+import '../features/product/presentation/screens/products_screen.dart';
+import '../features/vendor/presentation/screens/add_edit_vendor_screen.dart';
+import '../features/vendor/presentation/screens/vendor_detail_screen.dart';
+import '../features/vendor/presentation/screens/vendors_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
 import 'providers.dart';
@@ -112,6 +118,50 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return AddEditCategoryScreen(categoryId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.products,
+        builder: (context, state) => const ProductsScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.productDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ProductDetailScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.addProduct,
+        builder: (context, state) => const AddEditProductScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editProduct}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditProductScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.vendors,
+        builder: (context, state) => const VendorsScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.vendorDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return VendorDetailScreen(vendorId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.addVendor,
+        builder: (context, state) => const AddEditVendorScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editVendor}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditVendorScreen(vendorId: id);
         },
       ),
     ],

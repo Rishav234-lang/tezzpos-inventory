@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dartz/dartz.dart';
 
 import '../../../../core/errors/failures.dart';
@@ -20,4 +22,5 @@ abstract class CategoryRepository {
     String? status,
   });
   Future<Either<Failure, void>> deleteCategory(String id);
+  Future<Either<Failure, String>> uploadCategoryImage(File imageFile);
 }

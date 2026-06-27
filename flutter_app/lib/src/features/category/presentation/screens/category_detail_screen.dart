@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
@@ -78,12 +79,25 @@ class CategoryDetailScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: bgColor,
                           borderRadius: BorderRadius.circular(14),
+                          image: category.imageUrl != null && category.imageUrl!.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(
+                                    category.imageUrl!.startsWith('http')
+                                        ? category.imageUrl!
+                                        : '${ApiConstants.baseUrl}${category.imageUrl!}',
+                                  ),
+                                  fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {},
+                                )
+                              : null,
                         ),
-                        child: Icon(
-                          _categoryIcon(category.name),
-                          color: iconColor,
-                          size: 28,
-                        ),
+                        child: category.imageUrl == null || category.imageUrl!.isEmpty
+                            ? Icon(
+                                _categoryIcon(category.name),
+                                color: iconColor,
+                                size: 28,
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 16),
                       Expanded(

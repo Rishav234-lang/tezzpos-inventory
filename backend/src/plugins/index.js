@@ -4,6 +4,10 @@ const jwt = require('@fastify/jwt');
 const rateLimit = require('@fastify/rate-limit');
 const swagger = require('@fastify/swagger');
 const swaggerUi = require('@fastify/swagger-ui');
+const multipart = require('@fastify/multipart');
+const staticPlugin = require('@fastify/static');
+const path = require('path');
+const fs = require('fs');
 const prismaPlugin = require('./prisma');
 
 const registerPlugins = async (app) => {
@@ -50,6 +54,25 @@ const registerPlugins = async (app) => {
 
   await app.register(swaggerUi, {
     routePrefix: '/docs',
+  });
+
+  await app.register(multipart, {
+    limits: {
+      fileSize: 2 * 1024 * 1024, // 2MB
+      files: 1,
+    },
+  });
+
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  await app.register(staticPlugin, {
+    root: uploadsDir,
+    prefix: '/uploads/',
+    decorateReply: false,
   });
 
   await app.register(prismaPlugin);

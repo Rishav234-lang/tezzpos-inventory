@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const { vendorSchema } = require('../utils/validators');
 const { handleError, NotFoundError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
@@ -45,7 +46,35 @@ async function vendorRoutes(fastify) {
         fastify.prisma.vendor.count({ where }),
       ]);
 
-      return createPaginatedResponse(vendors, total, page, limit);
+      // Fetch purchase aggregates for returned vendors
+      const vendorIds = vendors.map(v => v.id);
+      let aggregates = [];
+      if (vendorIds.length > 0) {
+        aggregates = await fastify.prisma.$queryRaw`
+          SELECT
+            p.vendor_id AS vendor_id,
+            COALESCE(SUM(p.total_amount), 0)::float AS total_purchase_amount,
+            COALESCE(SUM(p.paid_amount), 0)::float AS total_paid_amount,
+            MAX(p.purchase_date) AS last_purchase_date
+          FROM purchases p
+          WHERE p.vendor_id IN (${Prisma.join(vendorIds)})
+            AND p.company_id = ${companyId}
+          GROUP BY p.vendor_id
+        `;
+      }
+
+      const aggMap = new Map(aggregates.map(a => [a.vendor_id, a]));
+      const vendorData = vendors.map(v => {
+        const agg = aggMap.get(v.id);
+        return {
+          ...v,
+          totalPurchaseAmount: agg?.total_purchase_amount ?? 0,
+          outstandingBalance: (agg?.total_purchase_amount ?? 0) - (agg?.total_paid_amount ?? 0),
+          lastPurchaseDate: agg?.last_purchase_date ?? null,
+        };
+      });
+
+      return createPaginatedResponse(vendorData, total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -129,10 +158,14 @@ async function vendorRoutes(fastify) {
       const companyId = request.user.companyId;
       const vendorId = request.params.id;
 
-      const [purchases, payments] = await Promise.all([
+      const [purchasesRaw, paymentsRaw] = await Promise.all([
         fastify.prisma.purchase.findMany({
           where: { companyId, vendorId },
-          select: { id: true, invoiceNumber: true, purchaseDate: true, totalAmount: true, paidAmount: true, status: true },
+          include: {
+            batches: {
+              select: { id: true, batchNumber: true, expiryDate: true, availableQuantity: true, purchasePrice: true, status: true },
+            },
+          },
           orderBy: { purchaseDate: 'desc' },
         }),
         fastify.prisma.vendorPayment.findMany({
@@ -141,8 +174,25 @@ async function vendorRoutes(fastify) {
         }),
       ]);
 
-      const totalPurchaseAmount = purchases.reduce((sum, p) => sum + Number(p.totalAmount), 0);
-      const totalPaidAmount = purchases.reduce((sum, p) => sum + Number(p.paidAmount), 0);
+      // Convert Decimal fields to numbers for JSON serialization
+      const purchases = purchasesRaw.map(p => ({
+        ...p,
+        totalAmount: Number(p.totalAmount),
+        paidAmount: Number(p.paidAmount),
+        balanceAmount: Number(p.balanceAmount),
+        batches: p.batches.map(b => ({
+          ...b,
+          purchasePrice: Number(b.purchasePrice),
+        })),
+      }));
+
+      const payments = paymentsRaw.map(p => ({
+        ...p,
+        amount: Number(p.amount),
+      }));
+
+      const totalPurchaseAmount = purchases.reduce((sum, p) => sum + p.totalAmount, 0);
+      const totalPaidAmount = purchases.reduce((sum, p) => sum + p.paidAmount, 0);
       const outstandingBalance = totalPurchaseAmount - totalPaidAmount;
 
       return { purchases, payments, totalPurchaseAmount, totalPaidAmount, outstandingBalance };

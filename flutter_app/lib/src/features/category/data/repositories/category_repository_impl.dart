@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dartz/dartz.dart';
 
 import '../../../../core/errors/failures.dart';
@@ -85,6 +87,18 @@ class CategoryRepositoryImpl implements CategoryRepository {
     try {
       await _remoteDataSource.deleteCategory(id);
       return const Right(null);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadCategoryImage(File imageFile) async {
+    try {
+      final path = await _remoteDataSource.uploadCategoryImage(imageFile);
+      return Right(path);
     } on Failure catch (e) {
       return Left(e);
     } catch (e) {

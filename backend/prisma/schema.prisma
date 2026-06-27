@@ -154,6 +154,7 @@ model Vendor {
   gstNumber String?  @map("gst_number")
   email     String?
   address   String?
+  status    String   @default("ACTIVE")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -173,11 +174,14 @@ model Product {
   companyId       String        @map("company_id")
   categoryId      String?       @map("category_id")
   name            String
+  description     String?
   sku             String?
   barcode         String?
+  imageUrl        String?       @map("image_url")
   unit            String        @default("PCS")
   hsnCode         String?       @map("hsn_code")
   gstRate         Decimal       @default(0) @map("gst_rate") @db.Decimal(5, 2)
+  costPrice       Decimal       @default(0) @map("cost_price") @db.Decimal(10, 2)
   sellingPrice    Decimal       @map("selling_price") @db.Decimal(10, 2)
   minStockLevel   Int           @default(10) @map("min_stock_level")
   status          ProductStatus @default(ACTIVE)

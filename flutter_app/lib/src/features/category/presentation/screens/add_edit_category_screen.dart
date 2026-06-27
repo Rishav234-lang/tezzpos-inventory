@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../providers/category_providers.dart';
@@ -18,47 +22,40 @@ class AddEditCategoryScreen extends ConsumerStatefulWidget {
 class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+  String _imageUrl = '';
+  File? _pickedImageFile;
   String _status = 'ACTIVE';
-  bool _isLoading = false;
-  bool _controllersInitialized = false;
+  bool _isSaving = false;
+  bool _controllersSet = false;
 
   bool get isEdit => widget.categoryId != null && widget.categoryId!.isNotEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    if (isEdit) {
-      // Schedule loading after first frame
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadCategory());
-    }
-  }
-
-  void _loadCategory() {
-    final categoryAsync = ref.read(categoryDetailProvider(widget.categoryId!));
-    categoryAsync.whenData((cat) {
-      if (!_controllersInitialized && mounted) {
-        setState(() {
-          _nameController.text = cat.name;
-          _descriptionController.text = cat.description ?? '';
-          _imageUrlController.text = cat.imageUrl ?? '';
-          _status = cat.status;
-          _controllersInitialized = true;
-        });
-      }
-    });
-  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
+  }
+
+  void _setControllersFromCategory(dynamic cat) {
+    if (_controllersSet) return;
+    _nameController.text = cat.name;
+    _descriptionController.text = cat.description ?? '';
+    _imageUrl = cat.imageUrl ?? '';
+    _pickedImageFile = null;
+    _status = cat.status;
+    _controllersSet = true;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isEdit) {
+      final categoryAsync = ref.watch(categoryDetailProvider(widget.categoryId!));
+      categoryAsync.whenData(_setControllersFromCategory);
+    }
+
+    final isLoading = _isSaving || (isEdit && !_controllersSet);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -71,89 +68,15 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
         title: Text(isEdit ? 'Edit Category' : 'Add Category'),
         centerTitle: true,
       ),
-      body: _isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image upload placeholder
-                  Center(
-                    child: GestureDetector(
-                      onTap: () {},
-                      child: Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppColors.outline.withValues(alpha: 0.3),
-                                style: BorderStyle.solid,
-                              ),
-                              image: _imageUrlController.text.isNotEmpty
-                                  ? DecorationImage(
-                                      image: NetworkImage(_imageUrlController.text),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            ),
-                            child: _imageUrlController.text.isEmpty
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 52,
-                                        height: 52,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary.withValues(alpha: 0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.image,
-                                          color: AppColors.primary,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        'Upload Category Image',
-                                        style: context.textTheme.labelSmall?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'JPG, PNG up to 2MB',
-                                        style: context.textTheme.labelSmall?.copyWith(
-                                          color: AppColors.onSurfaceVariant,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : null,
-                          ),
-                          if (_imageUrlController.text.isNotEmpty)
-                            Container(
-                              margin: const EdgeInsets.all(8),
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.edit, color: Colors.white, size: 14),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildImageArea(context),
                   const SizedBox(height: 24),
-                  // Name
                   _buildLabel('Category Name', required: true),
                   const SizedBox(height: 6),
                   TextField(
@@ -161,7 +84,6 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     decoration: _inputDecoration('Enter category name'),
                   ),
                   const SizedBox(height: 20),
-                  // Description
                   _buildLabel('Description'),
                   const SizedBox(height: 6),
                   TextField(
@@ -171,7 +93,6 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     decoration: _inputDecoration('Enter description (optional)'),
                   ),
                   const SizedBox(height: 20),
-                  // Status
                   _buildLabel('Status', required: true),
                   const SizedBox(height: 10),
                   Row(
@@ -190,11 +111,10 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  // Save button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _save,
+                      onPressed: _isSaving ? null : _save,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -203,17 +123,125 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
                       ),
-                      child: Text(
-                        isEdit ? 'Update Category' : 'Save Category',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              isEdit ? 'Update Category' : 'Save Category',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                            ),
                     ),
                   ),
                 ],
               ),
             ),
     );
+  }
+
+  Widget _buildImageArea(BuildContext context) {
+    final hasPickedFile = _pickedImageFile != null;
+    final hasImageUrl = _imageUrl.isNotEmpty;
+    final hasImage = hasPickedFile || hasImageUrl;
+
+    ImageProvider? imageProvider;
+    if (hasPickedFile) {
+      imageProvider = FileImage(_pickedImageFile!);
+    } else if (hasImageUrl) {
+      final url = _imageUrl.startsWith('http') ? _imageUrl : '${ApiConstants.baseUrl}$_imageUrl';
+      imageProvider = NetworkImage(url);
+    }
+
+    return Center(
+      child: GestureDetector(
+        onTap: _pickImage,
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.outline.withValues(alpha: 0.3),
+                ),
+                image: imageProvider != null
+                    ? DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                        onError: (exception, stackTrace) {},
+                      )
+                    : null,
+              ),
+              child: !hasImage
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.image,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Upload Image',
+                          style: context.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to pick from gallery',
+                          style: context.textTheme.labelSmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    )
+                  : null,
+            ),
+            Container(
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.edit, color: Colors.white, size: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, maxHeight: 1200, imageQuality: 85);
+    if (picked != null) {
+      setState(() {
+        _pickedImageFile = File(picked.path);
+        _imageUrl = '';
+      });
+    }
   }
 
   Widget _buildLabel(String text, {bool required = false}) {
@@ -266,37 +294,62 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isSaving = true);
+
+    String? imagePath;
+    if (_pickedImageFile != null) {
+      imagePath = await ref.read(categoryNotifierProvider.notifier).uploadCategoryImage(_pickedImageFile!);
+      if (imagePath == null) {
+        if (!mounted) return;
+        final notifierState = ref.read(categoryNotifierProvider);
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Image upload failed: ${notifierState.error}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+    } else if (_imageUrl.isNotEmpty) {
+      imagePath = _imageUrl;
+    }
+
+    if (!mounted) return;
 
     final description = _descriptionController.text.trim();
-    final imageUrl = _imageUrlController.text.trim();
 
     if (isEdit) {
       await ref.read(categoryNotifierProvider.notifier).updateCategory(
         id: widget.categoryId!,
         name: name,
         description: description.isNotEmpty ? description : null,
-        imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
+        imageUrl: imagePath,
         status: _status,
       );
     } else {
       await ref.read(categoryNotifierProvider.notifier).createCategory(
         name: name,
         description: description.isNotEmpty ? description : null,
-        imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
+        imageUrl: imagePath,
         status: _status,
       );
     }
 
-    setState(() => _isLoading = false);
-
     if (!mounted) return;
+
     final notifierState = ref.read(categoryNotifierProvider);
     if (notifierState.hasError) {
+      setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${notifierState.error}')),
+        SnackBar(
+          content: Text('${notifierState.error}'),
+          backgroundColor: AppColors.error,
+        ),
       );
     } else {
+      ref.invalidate(categoriesProvider(''));
+      if (isEdit) ref.invalidate(categoryDetailProvider(widget.categoryId!));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(isEdit ? 'Category updated' : 'Category created')),
       );

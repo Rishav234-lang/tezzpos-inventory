@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import '../../../../core/constants/api_constants.dart';
@@ -10,6 +12,7 @@ abstract class CategoryRemoteDataSource {
   Future<CategoryModel> createCategory(Map<String, dynamic> data);
   Future<CategoryModel> updateCategory(String id, Map<String, dynamic> data);
   Future<void> deleteCategory(String id);
+  Future<String> uploadCategoryImage(File imageFile);
 }
 
 class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
@@ -74,10 +77,34 @@ class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
     }
   }
 
+  @override
+  Future<String> uploadCategoryImage(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: imageFile.path.split('/').last.split('\\').last,
+        ),
+      });
+      final response = await _dio.post(
+        ApiConstants.categoryImageUpload,
+        data: formData,
+      );
+      return (response.data['path'] as String);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   Failure _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
-    final message = e.response?.data?['message'] ?? e.message ?? 'Something went wrong';
+    final responseData = e.response?.data;
+    final message = responseData is Map<String, dynamic>
+        ? (responseData['error'] ?? responseData['message'] ?? e.message ?? 'Something went wrong')
+        : (e.message ?? 'Something went wrong');
     switch (statusCode) {
+      case 400:
+        return ValidationFailure(message: message);
       case 401:
         return UnauthorizedFailure(message: message);
       case 404:

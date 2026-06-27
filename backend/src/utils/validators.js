@@ -18,16 +18,22 @@ const vendorSchema = z.object({
   gstNumber: z.string().max(20).optional().nullable(),
   email: z.string().email().optional().nullable(),
   address: z.string().max(500).optional().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE'),
 });
 
 // Product validators
 const productSchema = z.object({
   name: z.string().min(1).max(200),
+  description: z.string().max(1000).optional().nullable(),
   sku: z.string().max(50).optional().nullable(),
   barcode: z.string().max(50).optional().nullable(),
   categoryId: z.string().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
   unit: z.string().default('PCS'),
-  sellingPrice: z.number().positive(),
+  hsnCode: z.string().max(20).optional().nullable(),
+  gstRate: z.number().min(0).max(100).default(0),
+  costPrice: z.number().min(0).default(0),
+  sellingPrice: z.number().min(0).default(0),
   minStockLevel: z.number().int().min(0).default(10),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });

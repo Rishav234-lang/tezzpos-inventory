@@ -1,3 +1,6 @@
+const path = require('path');
+const fs = require('fs');
+const { pipeline } = require('stream/promises');
 const { productSchema, categorySchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
@@ -102,7 +105,13 @@ async function productRoutes(fastify) {
   // Create Product
   fastify.post('/', async (request, reply) => {
     try {
-      const data = productSchema.parse(request.body);
+      let data;
+      try {
+        data = productSchema.parse(request.body);
+      } catch (zodError) {
+        const issues = zodError.issues?.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+        throw new ValidationError(issues || zodError.message);
+      }
       const companyId = request.user.companyId;
 
       // Check SKU uniqueness
@@ -255,7 +264,13 @@ async function productRoutes(fastify) {
   // Update Product
   fastify.put('/:id', async (request, reply) => {
     try {
-      const data = productSchema.parse(request.body);
+      let data;
+      try {
+        data = productSchema.partial().parse(request.body);
+      } catch (zodError) {
+        const issues = zodError.issues?.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+        throw new ValidationError(issues || zodError.message);
+      }
       const companyId = request.user.companyId;
 
       const existing = await fastify.prisma.product.findFirst({
@@ -297,6 +312,40 @@ async function productRoutes(fastify) {
       });
       return { message: 'Product deactivated successfully' };
     } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // Upload product image
+  fastify.post('/upload', async (request, reply) => {
+    try {
+      const data = await request.file();
+      if (!data) {
+        reply.status(400).send({ error: 'No file uploaded' });
+        return;
+      }
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!allowedTypes.includes(data.mimetype)) {
+        reply.status(400).send({ error: 'Invalid file type. Only JPG, PNG, WEBP allowed' });
+        return;
+      }
+
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'products');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const ext = path.extname(data.filename) || '.jpg';
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+      const filepath = path.join(uploadsDir, filename);
+      const relativePath = `/uploads/products/${filename}`;
+
+      await pipeline(data.file, fs.createWriteStream(filepath));
+
+      return { path: relativePath };
+    } catch (error) {
+      console.error('Upload error:', error);
       handleError(reply, error);
     }
   });

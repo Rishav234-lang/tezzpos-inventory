@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/providers.dart';
@@ -87,6 +89,21 @@ class CategoryNotifier extends StateNotifier<AsyncValue<void>> {
     result.fold(
       (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
       (_) => state = const AsyncValue.data(null),
+    );
+  }
+
+  Future<String?> uploadCategoryImage(File imageFile) async {
+    state = const AsyncValue.loading();
+    final result = await _repository.uploadCategoryImage(imageFile);
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.message, StackTrace.current);
+        return null;
+      },
+      (path) {
+        state = const AsyncValue.data(null);
+        return path;
+      },
     );
   }
 }

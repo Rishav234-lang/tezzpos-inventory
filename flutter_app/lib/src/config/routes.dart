@@ -16,6 +16,9 @@ import '../features/product/presentation/screens/product_detail_screen.dart';
 import '../features/product/presentation/screens/products_screen.dart';
 import '../features/vendor/presentation/screens/add_edit_vendor_screen.dart';
 import '../features/vendor/presentation/screens/vendor_detail_screen.dart';
+import '../features/purchase/presentation/screens/create_purchase_screen.dart';
+import '../features/purchase/presentation/screens/purchase_detail_screen.dart';
+import '../features/purchase/presentation/screens/purchase_list_screen.dart';
 import '../features/vendor/presentation/screens/vendors_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
@@ -162,6 +165,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return AddEditVendorScreen(vendorId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.purchases,
+        builder: (context, state) => const PurchaseListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.addPurchase,
+        builder: (context, state) => const CreatePurchaseScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.purchaseDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PurchaseDetailScreen(purchaseId: id);
         },
       ),
     ],

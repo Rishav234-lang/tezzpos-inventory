@@ -20,6 +20,11 @@ class AppRoutes {
   static const String vendorDetail = '/vendors/detail';
   static const String addVendor = '/vendors/add';
   static const String editVendor = '/vendors/edit';
+
+  static const String purchases = '/purchases';
+  static const String purchaseDetail = '/purchases/detail';
+  static const String addPurchase = '/purchases/add';
+  static const String editPurchase = '/purchases/edit';
 }
 
 class AppStrings {

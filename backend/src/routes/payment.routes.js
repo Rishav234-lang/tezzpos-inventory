@@ -9,7 +9,7 @@ async function paymentRoutes(fastify) {
   // ==================== CUSTOMER PAYMENTS ====================
 
   // Receive Payment from Customer
-  fastify.post('/customer', async (request, reply) => {
+  fastify.post('/customers', async (request, reply) => {
     try {
       const data = customerPaymentSchema.parse(request.body);
       const payment = await fastify.prisma.customerPayment.create({
@@ -30,7 +30,7 @@ async function paymentRoutes(fastify) {
   });
 
   // Get Customer Payments
-  fastify.get('/customer', async (request, reply) => {
+  fastify.get('/customers', async (request, reply) => {
     try {
       const { page, limit, skip } = getPaginationParams(request.query);
       const { customerId, startDate, endDate } = request.query;
@@ -64,20 +64,47 @@ async function paymentRoutes(fastify) {
   // ==================== VENDOR PAYMENTS ====================
 
   // Make Payment to Vendor
-  fastify.post('/vendor', async (request, reply) => {
+  fastify.post('/vendors', async (request, reply) => {
     try {
       const data = vendorPaymentSchema.parse(request.body);
       const payment = await fastify.prisma.vendorPayment.create({
         data: {
           companyId: request.user.companyId,
           vendorId: data.vendorId,
+          purchaseId: data.purchaseId,
           amount: data.amount,
           paymentDate: new Date(data.paymentDate),
           paymentMethod: data.paymentMethod,
+          referenceNo: data.referenceNo,
           notes: data.notes,
         },
         include: { vendor: { select: { id: true, name: true } } },
       });
+
+      // If linked to a purchase, update the purchase paid amount
+      if (data.purchaseId) {
+        const purchase = await fastify.prisma.purchase.findFirst({
+          where: { id: data.purchaseId, companyId: request.user.companyId },
+        });
+        if (purchase) {
+          const newPaid = Number(purchase.paidAmount) + Number(data.amount);
+          const newBalance = Number(purchase.totalAmount) - newPaid;
+          const newStatus = newPaid >= Number(purchase.totalAmount)
+            ? 'PAID'
+            : newPaid > 0
+              ? 'PARTIAL'
+              : 'UNPAID';
+          await fastify.prisma.purchase.update({
+            where: { id: data.purchaseId },
+            data: {
+              paidAmount: newPaid,
+              balanceAmount: Math.max(0, newBalance),
+              status: newStatus,
+            },
+          });
+        }
+      }
+
       return reply.status(201).send(payment);
     } catch (error) {
       handleError(reply, error);
@@ -85,7 +112,7 @@ async function paymentRoutes(fastify) {
   });
 
   // Get Vendor Payments
-  fastify.get('/vendor', async (request, reply) => {
+  fastify.get('/vendors', async (request, reply) => {
     try {
       const { page, limit, skip } = getPaginationParams(request.query);
       const { vendorId, startDate, endDate } = request.query;

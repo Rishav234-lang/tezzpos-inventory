@@ -111,9 +111,11 @@ const customerPaymentSchema = z.object({
 
 const vendorPaymentSchema = z.object({
   vendorId: z.string(),
+  purchaseId: z.string().optional().nullable(),
   amount: z.number().positive(),
   paymentDate: z.string(),
   paymentMethod: z.enum(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER']),
+  referenceNo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 

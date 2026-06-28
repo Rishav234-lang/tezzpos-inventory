@@ -91,7 +91,7 @@ async function purchaseRoutes(fastify) {
   fastify.get('/', async (request, reply) => {
     try {
       const { page, limit, skip } = getPaginationParams(request.query);
-      const { vendorId, status, startDate, endDate } = request.query;
+      const { vendorId, status, startDate, endDate, sortOrder } = request.query;
       const companyId = request.user.companyId;
 
       const where = { companyId };
@@ -103,6 +103,8 @@ async function purchaseRoutes(fastify) {
         if (endDate) where.purchaseDate.lte = new Date(endDate);
       }
 
+      const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc';
+
       const [purchases, total] = await Promise.all([
         fastify.prisma.purchase.findMany({
           where,
@@ -112,7 +114,7 @@ async function purchaseRoutes(fastify) {
           },
           skip,
           take: limit,
-          orderBy: { purchaseDate: 'desc' },
+          orderBy: { purchaseDate: orderDirection },
         }),
         fastify.prisma.purchase.count({ where }),
       ]);
@@ -132,6 +134,9 @@ async function purchaseRoutes(fastify) {
           vendor: true,
           items: { include: { product: { select: { id: true, name: true, sku: true } } } },
           batches: true,
+          vendorPayments: {
+            orderBy: { paymentDate: 'desc' },
+          },
         },
       });
       if (!purchase) throw new NotFoundError('Purchase');

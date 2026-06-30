@@ -32,6 +32,7 @@ class ApiConstants {
   static const String inventoryAdjust = '/api/inventory/adjust';
   static const String inventoryLowStock = '/api/inventory/low-stock';
   static const String inventoryNearExpiry = '/api/inventory/near-expiry';
+  static const String inventoryStats = '/api/inventory/stats';
 
   // Products
   static const String products = '/api/products';

@@ -14,11 +14,28 @@ import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/product/presentation/screens/add_edit_product_screen.dart';
 import '../features/product/presentation/screens/product_detail_screen.dart';
 import '../features/product/presentation/screens/products_screen.dart';
+import '../features/inventory/presentation/screens/batch_detail_screen.dart';
+import '../features/inventory/presentation/screens/inventory_detail_screen.dart';
+import '../features/inventory/presentation/screens/inventory_screen.dart';
+import '../features/inventory/presentation/screens/product_batches_screen.dart';
+import '../features/inventory/presentation/screens/stock_adjustment_screen.dart';
+import '../features/customer/presentation/screens/add_edit_customer_screen.dart';
+import '../features/customer/presentation/screens/customer_detail_screen.dart';
+import '../features/customer/presentation/screens/customers_screen.dart';
+import '../features/customer/presentation/screens/receive_payment_screen.dart';
 import '../features/vendor/presentation/screens/add_edit_vendor_screen.dart';
 import '../features/vendor/presentation/screens/vendor_detail_screen.dart';
 import '../features/purchase/presentation/screens/create_purchase_screen.dart';
 import '../features/purchase/presentation/screens/purchase_detail_screen.dart';
 import '../features/purchase/presentation/screens/purchase_list_screen.dart';
+import '../features/purchase/presentation/screens/purchase_return_screen.dart';
+import '../features/sale/presentation/screens/bill_invoice_screen.dart';
+import '../features/sale/presentation/screens/create_sale_return_screen.dart';
+import '../features/sale/presentation/screens/sale_detail_screen.dart';
+import '../features/sale/presentation/screens/sale_return_detail_screen.dart';
+import '../features/sale/presentation/screens/sales_history_screen.dart';
+import '../features/sale/presentation/screens/sales_screen.dart';
+import '../features/sale/presentation/screens/select_customer_screen.dart';
 import '../features/vendor/presentation/screens/vendors_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
@@ -168,6 +185,111 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: AppRoutes.customers,
+        builder: (context, state) => const CustomersScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.customerDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerDetailScreen(customerId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.addCustomer,
+        builder: (context, state) => const AddEditCustomerScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editCustomer}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditCustomerScreen(customerId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.receivePayment}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ReceivePaymentScreen(customerId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.inventory,
+        builder: (context, state) => const InventoryScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.inventoryDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return InventoryDetailScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.stockAdjustment}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return StockAdjustmentScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.stockAdjustment,
+        builder: (context, state) => const StockAdjustmentScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.batchDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return BatchDetailScreen(batchId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.productBatches}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ProductBatchesScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.sales,
+        builder: (context, state) => const SalesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.salesHistory,
+        builder: (context, state) => const SalesHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.selectSaleCustomer,
+        builder: (context, state) => const SelectCustomerScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.saleDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SaleDetailScreen(saleId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.billInvoice}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return BillInvoiceScreen(saleId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.saleReturn}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreateSaleReturnScreen(saleId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.saleReturnDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SaleReturnDetailScreen(returnId: id);
+        },
+      ),
+      GoRoute(
         path: AppRoutes.purchases,
         builder: (context, state) => const PurchaseListScreen(),
       ),
@@ -180,6 +302,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return PurchaseDetailScreen(purchaseId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.editPurchase}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreatePurchaseScreen(purchaseId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.duplicatePurchase}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreatePurchaseScreen(duplicatePurchaseId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.purchaseReturn}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PurchaseReturnScreen(purchaseId: id);
         },
       ),
     ],

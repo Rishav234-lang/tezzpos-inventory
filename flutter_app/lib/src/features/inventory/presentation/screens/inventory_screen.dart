@@ -1,0 +1,642 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
+
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/extensions.dart';
+import '../../../category/domain/entities/category.dart';
+import '../../../category/presentation/providers/category_providers.dart';
+import '../../../product/domain/entities/inventory_stats.dart';
+import '../../../product/domain/entities/product.dart';
+import '../../../product/presentation/providers/product_providers.dart';
+
+class InventoryScreen extends ConsumerStatefulWidget {
+  const InventoryScreen({super.key});
+
+  @override
+  ConsumerState<InventoryScreen> createState() => _InventoryScreenState();
+}
+
+class _InventoryScreenState extends ConsumerState<InventoryScreen> {
+  final _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  String _activeFilter = 'All';
+  String? _selectedCategoryId;
+  final int _currentPage = 1;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  String? get _stockFilter {
+    if (_activeFilter == 'Low Stock') return 'LOW';
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filter = ProductFilter(
+      search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+      categoryId: _selectedCategoryId,
+      stockFilter: _stockFilter,
+      page: _currentPage,
+    );
+    final productsAsync = ref.watch(productsProvider(filter));
+    final categoriesAsync = ref.watch(categoriesProvider(''));
+    final statsAsync = ref.watch(inventoryStatsProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(inventoryStatsProvider);
+            ref.invalidate(productsProvider(filter));
+          },
+          color: AppColors.primary,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitleRow(context),
+                      const SizedBox(height: 16),
+                      statsAsync.when(
+                        data: (stats) => _buildSummaryCards(context, stats),
+                        loading: () => _buildSummaryShimmer(),
+                        error: (_, _) => const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSearchBar(),
+                      const SizedBox(height: 12),
+                      _buildFilterChips(categoriesAsync),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
+                ),
+              ),
+              productsAsync.when(
+                data: (products) {
+                  final filtered = _applyLocalFilter(products);
+                  if (filtered.isEmpty) {
+                    return SliverFillRemaining(child: _buildEmptyState(context));
+                  }
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: _InventoryProductCard(product: filtered[index]),
+                      ),
+                      childCount: filtered.length,
+                    ),
+                  );
+                },
+                loading: () => SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: _ProductCardShimmer(),
+                    ),
+                    childCount: 6,
+                  ),
+                ),
+                error: (error, _) => SliverFillRemaining(
+                  child: Center(child: Text('Error: $error')),
+                ),
+              ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(AppRoutes.stockAdjustment),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Stock Adjustment',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        elevation: 4,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  List<Product> _applyLocalFilter(List<Product> products) {
+    if (_activeFilter == 'Expiring Soon') {
+      final now = DateTime.now();
+      final cutoff = now.add(const Duration(days: 30));
+      return products.where((p) {
+        if (p.firstExpiryDate == null) return false;
+        return p.firstExpiryDate!.isAfter(now) && p.firstExpiryDate!.isBefore(cutoff);
+      }).toList();
+    }
+    return products;
+  }
+
+  Widget _buildTitleRow(BuildContext context) {
+    return Row(
+      children: [
+        Text('Inventory', style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        const Spacer(),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.search, color: AppColors.onSurface, size: 24),
+          padding: EdgeInsets.zero,
+        ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.filter_list, color: AppColors.onSurface, size: 24),
+          padding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCards(BuildContext context, InventoryStats stats) {
+    final items = [
+      _SummaryData(
+        label: 'Total Products',
+        value: '${stats.totalProducts}',
+        sub: 'View all',
+        icon: Icons.inventory_2_outlined,
+        iconBg: const Color(0xFFE3F2FD),
+        iconColor: const Color(0xFF1976D2),
+        onTap: () {},
+      ),
+      _SummaryData(
+        label: 'Stock Value',
+        value: '₹ ${_fmtL(stats.inventoryValue)}',
+        sub: 'View details',
+        icon: Icons.account_balance_wallet_outlined,
+        iconBg: const Color(0xFFE8F5E9),
+        iconColor: const Color(0xFF388E3C),
+        onTap: () {},
+      ),
+      _SummaryData(
+        label: 'Low Stock',
+        value: '${stats.lowStockCount}',
+        sub: 'View all',
+        icon: Icons.warning_amber_rounded,
+        iconBg: const Color(0xFFFFF3E0),
+        iconColor: const Color(0xFFF57C00),
+        onTap: () => setState(() => _activeFilter = 'Low Stock'),
+      ),
+      _SummaryData(
+        label: 'Expiring Soon',
+        value: '${stats.expiringSoonCount}',
+        sub: 'View all',
+        icon: Icons.timer_outlined,
+        iconBg: const Color(0xFFFFEBEE),
+        iconColor: const Color(0xFFD32F2F),
+        onTap: () => setState(() => _activeFilter = 'Expiring Soon'),
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, i) => _SummaryCard(data: items[i]),
+    );
+  }
+
+  String _fmtL(double v) {
+    if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    return v.toStringAsFixed(0);
+  }
+
+  Widget _buildSummaryShimmer() {
+    return Shimmer.fromColors(
+      baseColor: AppColors.surface,
+      highlightColor: AppColors.background,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, childAspectRatio: 1.4, crossAxisSpacing: 12, mainAxisSpacing: 12,
+        ),
+        itemCount: 4,
+        itemBuilder: (_, _) => Container(
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      controller: _searchController,
+      onChanged: (_) {
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: 300), () => setState(() {}));
+      },
+      decoration: InputDecoration(
+        hintText: 'Search product, SKU or barcode',
+        hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
+        prefixIcon: const Icon(Icons.search, size: 20),
+        suffixIcon: const Icon(Icons.qr_code_scanner, size: 20),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(AsyncValue<List<Category>> categoriesAsync) {
+    final fixedChips = ['All', 'Low Stock', 'Expiring Soon'];
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          ...fixedChips.map((label) {
+            final isSelected = _activeFilter == label && _selectedCategoryId == null;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(label),
+                selected: isSelected,
+                onSelected: (_) => setState(() {
+                  _activeFilter = label;
+                  _selectedCategoryId = null;
+                }),
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : AppColors.onSurface,
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: isSelected ? AppColors.primary : AppColors.outline.withValues(alpha: 0.3)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                showCheckmark: false,
+              ),
+            );
+          }),
+          categoriesAsync.when(
+            data: (cats) => Row(
+              children: cats.map((c) {
+                final isSelected = _selectedCategoryId == c.id;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(c.name),
+                    selected: isSelected,
+                    onSelected: (_) => setState(() {
+                      _selectedCategoryId = isSelected ? null : c.id;
+                      _activeFilter = 'All';
+                    }),
+                    selectedColor: AppColors.primary,
+                    backgroundColor: AppColors.surface,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.onSurface,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(color: isSelected ? AppColors.primary : AppColors.outline.withValues(alpha: 0.3)),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    showCheckmark: false,
+                  ),
+                );
+              }).toList(),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.outline),
+          const SizedBox(height: 12),
+          Text('No products found', style: context.textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Summary Card ────────────────────────────────────────────────────────────
+
+class _SummaryData {
+  final String label;
+  final String value;
+  final String sub;
+  final IconData icon;
+  final Color iconBg;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  const _SummaryData({
+    required this.label,
+    required this.value,
+    required this.sub,
+    required this.icon,
+    required this.iconBg,
+    required this.iconColor,
+    required this.onTap,
+  });
+}
+
+class _SummaryCard extends StatelessWidget {
+  final _SummaryData data;
+
+  const _SummaryCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: data.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(color: data.iconBg, borderRadius: BorderRadius.circular(10)),
+              child: Icon(data.icon, size: 18, color: data.iconColor),
+            ),
+            const Spacer(),
+            Text(data.label, style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(data.value, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 17)),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Text(data.sub, style: context.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w500)),
+                const SizedBox(width: 2),
+                const Icon(Icons.chevron_right, size: 13, color: AppColors.primary),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Product Card ─────────────────────────────────────────────────────────────
+
+class _InventoryProductCard extends StatelessWidget {
+  final Product product;
+
+  const _InventoryProductCard({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFormat = DateFormat('dd MMM yyyy');
+    final currency = NumberFormat('#,##,##0.00');
+
+    final stockValue = product.totalStock * product.costPrice;
+
+    Color statusFg;
+    Color statusBg;
+    String statusText;
+    Color qtyColor;
+
+    if (product.isOutOfStock) {
+      statusText = 'Out of Stock';
+      statusBg = const Color(0xFFFFEBEE);
+      statusFg = const Color(0xFFC62828);
+      qtyColor = const Color(0xFFC62828);
+    } else if (product.isLowStock) {
+      statusText = 'Low Stock';
+      statusBg = const Color(0xFFFFF3E0);
+      statusFg = const Color(0xFFE65100);
+      qtyColor = const Color(0xFFE65100);
+    } else {
+      final expiringDays = product.firstExpiryDate?.difference(DateTime.now()).inDays;
+      if (expiringDays != null && expiringDays <= 30 && expiringDays >= 0) {
+        statusText = 'Expiring Soon';
+        statusBg = const Color(0xFFFFEBEE);
+        statusFg = const Color(0xFFC62828);
+        qtyColor = const Color(0xFF388E3C);
+      } else {
+        statusText = 'In Stock';
+        statusBg = const Color(0xFFE8F5E9);
+        statusFg = const Color(0xFF2E7D32);
+        qtyColor = const Color(0xFF388E3C);
+      }
+    }
+
+    String expiryLabel() {
+      if (product.firstExpiryDate == null) return 'N/A';
+      final diff = product.firstExpiryDate!.difference(DateTime.now()).inDays;
+      if (diff == 0) return 'Today';
+      if (diff == 1) return 'Tomorrow';
+      return dateFormat.format(product.firstExpiryDate!);
+    }
+
+    Color expiryColor() {
+      if (product.firstExpiryDate == null) return AppColors.onSurfaceVariant;
+      final diff = product.firstExpiryDate!.difference(DateTime.now()).inDays;
+      if (diff <= 7) return AppColors.error;
+      if (diff <= 30) return const Color(0xFFE65100);
+      return AppColors.onSurface;
+    }
+
+    return InkWell(
+      onTap: () => context.push('${AppRoutes.inventoryDetail}/${product.id}'),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row: image + name + status + arrow
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(10),
+                    image: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(
+                              product.imageUrl!.startsWith('http')
+                                  ? product.imageUrl!
+                                  : '${ApiConstants.baseUrl}${product.imageUrl!}',
+                            ),
+                            fit: BoxFit.contain,
+                            onError: (_, _) {},
+                          )
+                        : null,
+                  ),
+                  child: product.imageUrl == null || product.imageUrl!.isEmpty
+                      ? Icon(Icons.inventory_2_outlined, color: AppColors.onSurfaceVariant, size: 24)
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text('SKU: ${product.sku ?? 'N/A'}',
+                              style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 11)),
+                          if (product.barcode != null) ...[
+                            Text('  •  ', style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant)),
+                            Flexible(
+                              child: Text('Barcode: ${product.barcode}',
+                                  style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 11),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 6, height: 6, decoration: BoxDecoration(color: statusFg, shape: BoxShape.circle)),
+                      const SizedBox(width: 4),
+                      Text(statusText,
+                          style: context.textTheme.labelSmall?.copyWith(color: statusFg, fontWeight: FontWeight.w600, fontSize: 10)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant, size: 20),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            // Stock metrics row
+            Row(
+              children: [
+                _MetricCol(label: 'Stock Qty', value: '${product.totalStock} pcs', valueColor: qtyColor),
+                _MetricCol(label: 'Batch No.', value: product.firstBatchNumber ?? 'N/A'),
+                _MetricCol(
+                  label: 'Expiry Date',
+                  value: expiryLabel(),
+                  valueColor: expiryColor(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _MetricCol(label: 'Purchase Price', value: '₹ ${currency.format(product.costPrice)}'),
+                _MetricCol(label: 'MRP', value: product.firstMrp != null ? '₹ ${currency.format(product.firstMrp)}' : 'N/A'),
+                _MetricCol(label: 'Stock Value', value: '₹ ${currency.format(stockValue)}'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricCol extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _MetricCol({required this.label, required this.value, this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 10)),
+          const SizedBox(height: 3),
+          Text(value,
+              style: context.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? AppColors.onSurface,
+                fontSize: 12,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductCardShimmer extends StatelessWidget {
+  const _ProductCardShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: AppColors.surface,
+      highlightColor: AppColors.background,
+      child: Container(
+        height: 160,
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
+}

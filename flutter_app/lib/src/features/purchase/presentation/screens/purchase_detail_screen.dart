@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../config/providers.dart';
@@ -358,7 +359,7 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
               child: _ActionButton(
                 icon: Icons.edit_outlined,
                 label: 'Edit',
-                onTap: () {},
+                onTap: () => context.push('${AppRoutes.editPurchase}/${purchase.id}'),
               ),
             ),
             const SizedBox(width: 8),
@@ -383,7 +384,7 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
               child: _ActionButton(
                 icon: Icons.more_horiz,
                 label: 'More',
-                onTap: () {},
+                onTap: () => _showMoreOptionsSheet(purchase),
               ),
             ),
           ],
@@ -407,6 +408,98 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ShareInvoiceSheet(purchase: purchase),
+    );
+  }
+
+  void _showMoreOptionsSheet(Purchase purchase) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _MoreOptionsSheet(
+        purchase: purchase,
+        onDuplicate: () {
+          Navigator.pop(ctx);
+          context.push('${AppRoutes.duplicatePurchase}/${purchase.id}');
+        },
+        onAddNotes: () {
+          Navigator.pop(ctx);
+          _showAddNotesDialog(purchase);
+        },
+        onViewLedger: () {
+          Navigator.pop(ctx);
+          if (purchase.vendor != null) {
+            context.push('${AppRoutes.vendorDetail}/${purchase.vendor!.id}');
+          }
+        },
+        onViewBatches: () {
+          Navigator.pop(ctx);
+          _tabController.animateTo(3);
+        },
+        onMarkPaid: () async {
+          Navigator.pop(ctx);
+          final notifier = ref.read(purchaseNotifierProvider.notifier);
+          await notifier.updatePurchase(purchase.id, {
+            'paidAmount': purchase.totalAmount,
+            'status': 'PAID',
+          });
+          if (!mounted) return;
+          ref.invalidate(purchaseDetailProvider(purchase.id));
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Marked as paid')),
+          );
+        },
+        onArchive: () async {
+          Navigator.pop(ctx);
+          final notifier = ref.read(purchaseNotifierProvider.notifier);
+          await notifier.deletePurchase(purchase.id);
+          if (!mounted) return;
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Purchase archived')),
+          );
+        },
+        onReturn: () {
+          Navigator.pop(ctx);
+          context.push('${AppRoutes.purchaseReturn}/${purchase.id}');
+        },
+      ),
+    );
+  }
+
+  void _showAddNotesDialog(Purchase purchase) {
+    final controller = TextEditingController(text: purchase.notes ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Notes'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Enter notes...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final notifier = ref.read(purchaseNotifierProvider.notifier);
+              await notifier.updatePurchase(purchase.id, {'notes': controller.text.trim()});
+              if (!mounted) return;
+              ref.invalidate(purchaseDetailProvider(purchase.id));
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notes saved')),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1936,6 +2029,89 @@ class _ShareOption {
   final String label;
 
   const _ShareOption({required this.icon, required this.color, required this.label});
+}
+
+class _MoreOptionsSheet extends StatelessWidget {
+  final Purchase purchase;
+  final VoidCallback onDuplicate;
+  final VoidCallback onAddNotes;
+  final VoidCallback onViewLedger;
+  final VoidCallback onViewBatches;
+  final VoidCallback onMarkPaid;
+  final VoidCallback onArchive;
+  final VoidCallback onReturn;
+
+  const _MoreOptionsSheet({
+    required this.purchase,
+    required this.onDuplicate,
+    required this.onAddNotes,
+    required this.onViewLedger,
+    required this.onViewBatches,
+    required this.onMarkPaid,
+    required this.onArchive,
+    required this.onReturn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [
+      _MoreOption(icon: Icons.content_copy_outlined, label: 'Duplicate Purchase', onTap: onDuplicate),
+      _MoreOption(icon: Icons.edit_note_outlined, label: 'Add Notes', onTap: onAddNotes),
+      _MoreOption(icon: Icons.account_balance_wallet_outlined, label: 'View Vendor Ledger', onTap: onViewLedger),
+      _MoreOption(icon: Icons.inventory_2_outlined, label: 'View Stock Batches', onTap: onViewBatches),
+      _MoreOption(icon: Icons.check_circle_outlined, label: 'Mark as Paid', onTap: onMarkPaid),
+      _MoreOption(icon: Icons.assignment_return_outlined, label: 'Purchase Return', onTap: onReturn, color: AppColors.error),
+      _MoreOption(icon: Icons.delete_outline, label: 'Archive Purchase', onTap: onArchive, color: AppColors.error),
+    ];
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'More Options',
+                      style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...options.map((opt) => ListTile(
+                leading: Icon(opt.icon, color: opt.color ?? AppColors.onSurface),
+                title: Text(opt.label, style: TextStyle(color: opt.color ?? AppColors.onSurface)),
+                onTap: opt.onTap,
+                contentPadding: EdgeInsets.zero,
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MoreOption {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _MoreOption({required this.icon, required this.label, required this.onTap, this.color});
 }
 
 Widget _buildEmpty(String message) {

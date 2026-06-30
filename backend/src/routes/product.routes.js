@@ -169,7 +169,7 @@ async function productRoutes(fastify) {
             category: { select: { id: true, name: true } },
             batches: {
               where: { status: 'ACTIVE' },
-              select: { availableQuantity: true, purchasePrice: true },
+              select: { availableQuantity: true, purchasePrice: true, batchNumber: true, expiryDate: true, mrp: true },
               orderBy: { purchaseDate: 'desc' },
             },
           },
@@ -179,7 +179,16 @@ async function productRoutes(fastify) {
         const enriched = allProducts.map((p) => {
           const totalStock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
           const latestPurchasePrice = p.batches.length > 0 ? Number(p.batches[0].purchasePrice) : 0;
-          return { ...p, totalStock, purchasePrice: latestPurchasePrice, batches: undefined };
+          const firstBatch = p.batches[0];
+          return {
+            ...p,
+            totalStock,
+            purchasePrice: latestPurchasePrice,
+            firstBatchNumber: firstBatch?.batchNumber || null,
+            firstExpiryDate: firstBatch?.expiryDate || null,
+            firstMrp: firstBatch?.mrp || null,
+            batches: undefined,
+          };
         });
 
         const filtered = stockFilter === 'LOW'
@@ -197,7 +206,7 @@ async function productRoutes(fastify) {
               category: { select: { id: true, name: true } },
               batches: {
                 where: { status: 'ACTIVE' },
-                select: { availableQuantity: true, purchasePrice: true },
+                select: { availableQuantity: true, purchasePrice: true, batchNumber: true, expiryDate: true, mrp: true },
                 orderBy: { purchaseDate: 'desc' },
               },
             },
@@ -212,7 +221,16 @@ async function productRoutes(fastify) {
         finalProducts = products.map((p) => {
           const totalStock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
           const latestPurchasePrice = p.batches.length > 0 ? Number(p.batches[0].purchasePrice) : 0;
-          return { ...p, totalStock, purchasePrice: latestPurchasePrice, batches: undefined };
+          const firstBatch = p.batches[0];
+          return {
+            ...p,
+            totalStock,
+            purchasePrice: latestPurchasePrice,
+            firstBatchNumber: firstBatch?.batchNumber || null,
+            firstExpiryDate: firstBatch?.expiryDate || null,
+            firstMrp: firstBatch?.mrp || null,
+            batches: undefined,
+          };
         });
       }
 

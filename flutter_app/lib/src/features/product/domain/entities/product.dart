@@ -19,6 +19,9 @@ class Product extends Equatable {
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? firstBatchNumber;
+  final DateTime? firstExpiryDate;
+  final double? firstMrp;
 
   const Product({
     required this.id,
@@ -39,6 +42,9 @@ class Product extends Equatable {
     this.status = 'ACTIVE',
     required this.createdAt,
     required this.updatedAt,
+    this.firstBatchNumber,
+    this.firstExpiryDate,
+    this.firstMrp,
   });
 
   bool get isActive => status == 'ACTIVE';
@@ -63,5 +69,8 @@ class Product extends Equatable {
         minStockLevel,
         totalStock,
         status,
+        firstBatchNumber,
+        firstExpiryDate,
+        firstMrp,
       ];
 }

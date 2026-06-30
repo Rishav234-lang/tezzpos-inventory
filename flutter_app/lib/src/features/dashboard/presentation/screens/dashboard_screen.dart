@@ -87,8 +87,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomNav(context, ref),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _buildCenterFab(context),
     );
   }
   String _initials(String? name) {
@@ -355,47 +353,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildCenterFab(BuildContext context) {
-    return SizedBox(
-      height: 64,
-      width: 64,
-      child: FloatingActionButton(
-        onPressed: () => _showAddOptions(context),
-        backgroundColor: AppColors.primary,
-        elevation: 8,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
-      ),
-    );
-  }
-
-  void _showAddOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Quick Add', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _DrawerAction(icon: Icons.add_shopping_cart, label: 'Add Sale', color: AppColors.primary, onTap: () => _comingSoon(context)),
-            _DrawerAction(icon: Icons.shopping_basket, label: 'Add Purchase', color: AppColors.secondary, onTap: () => _comingSoon(context)),
-            _DrawerAction(icon: Icons.add_box, label: 'Add Product', color: AppColors.success, onTap: () {
-              context.pop();
-              context.push(AppRoutes.addProduct);
-            }),
-            _DrawerAction(icon: Icons.download, label: 'Stock In', color: AppColors.info, onTap: () => _comingSoon(context)),
-            _DrawerAction(icon: Icons.upload, label: 'Stock Out', color: AppColors.warning, onTap: () => _comingSoon(context)),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _comingSoon(BuildContext context) {
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -404,27 +361,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildBottomNav(BuildContext context, WidgetRef ref) {
-    return BottomAppBar(
-      height: 60,
-      padding: EdgeInsets.zero,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      color: AppColors.surface,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(icon: Icons.home, label: 'Dashboard', index: 0, selectedIndex: _selectedNavIndex, onTap: (i) => setState(() => _selectedNavIndex = i)),
-          _NavItem(icon: Icons.inventory_2, label: 'Products', index: 1, selectedIndex: _selectedNavIndex, onTap: (i) {
-            setState(() => _selectedNavIndex = i);
-            context.push(AppRoutes.products);
-          }),
-          const SizedBox(width: 48), // space for FAB
-          _NavItem(icon: Icons.bar_chart, label: 'Sales', index: 2, selectedIndex: _selectedNavIndex, onTap: (i) => setState(() => _selectedNavIndex = i)),
-          _NavItem(icon: Icons.more_horiz, label: 'More', index: 3, selectedIndex: _selectedNavIndex, onTap: (i) {
-            _scaffoldKey.currentState?.openDrawer();
-            setState(() => _selectedNavIndex = i);
-          }),
-        ],
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, -2))],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(icon: Icons.home_outlined, label: 'Dashboard', index: 0, selectedIndex: _selectedNavIndex, onTap: (i) => setState(() => _selectedNavIndex = i)),
+              _NavItem(icon: Icons.people_outlined, label: 'Customers', index: 1, selectedIndex: _selectedNavIndex, onTap: (i) {
+                setState(() => _selectedNavIndex = i);
+                context.push(AppRoutes.customers);
+              }),
+              _NavItem(icon: Icons.receipt_long_outlined, label: 'Sales', index: 2, selectedIndex: _selectedNavIndex, onTap: (i) {
+                setState(() => _selectedNavIndex = i);
+                context.push(AppRoutes.sales);
+              }),
+              _NavItem(icon: Icons.shopping_cart_outlined, label: 'Purchases', index: 3, selectedIndex: _selectedNavIndex, onTap: (i) {
+                setState(() => _selectedNavIndex = i);
+                context.push(AppRoutes.purchases);
+              }),
+              _NavItem(icon: Icons.more_horiz, label: 'More', index: 4, selectedIndex: _selectedNavIndex, onTap: (i) {
+                _scaffoldKey.currentState?.openDrawer();
+                setState(() => _selectedNavIndex = i);
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -464,10 +431,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 8),
             _DrawerAction(icon: Icons.category, label: 'Categories', color: AppColors.primary, onTap: () => context.push(AppRoutes.categories)),
             _DrawerAction(icon: Icons.inventory_2, label: 'Products', color: AppColors.success, onTap: () => context.push(AppRoutes.products)),
+            _DrawerAction(icon: Icons.inventory_2, label: 'Inventory', color: const Color(0xFF6A1B9A), onTap: () => context.push(AppRoutes.inventory)),
+            _DrawerAction(icon: Icons.people, label: 'Customers', color: const Color(0xFF00838F), onTap: () => context.push(AppRoutes.customers)),
             _DrawerAction(icon: Icons.local_shipping, label: 'Vendors', color: AppColors.info, onTap: () => context.push(AppRoutes.vendors)),
-            _DrawerAction(icon: Icons.receipt_long, label: 'Purchases', color: AppColors.secondary, onTap: () => context.push(AppRoutes.purchases)),
+            _DrawerAction(icon: Icons.receipt_long, label: 'Sales', color: const Color(0xFF1565C0), onTap: () => context.push(AppRoutes.sales)),
+            _DrawerAction(icon: Icons.shopping_cart_outlined, label: 'Purchases', color: AppColors.secondary, onTap: () => context.push(AppRoutes.purchases)),
             const Divider(),
-            _DrawerAction(icon: Icons.add_shopping_cart, label: 'Add Sale', color: AppColors.primary, onTap: () => _comingSoon(context)),
+            _DrawerAction(icon: Icons.add_shopping_cart, label: 'Add Sale', color: AppColors.primary, onTap: () => context.push(AppRoutes.sales)),
             _DrawerAction(icon: Icons.shopping_basket, label: 'Add Purchase', color: AppColors.secondary, onTap: () => context.push(AppRoutes.purchases)),
             _DrawerAction(icon: Icons.download, label: 'Stock In', color: AppColors.info, onTap: () => _comingSoon(context)),
             _DrawerAction(icon: Icons.upload, label: 'Stock Out', color: AppColors.warning, onTap: () => _comingSoon(context)),

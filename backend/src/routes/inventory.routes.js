@@ -110,6 +110,38 @@ async function inventoryRoutes(fastify) {
     }
   });
 
+  // Single Batch Detail
+  fastify.get('/batches/:id', async (request, reply) => {
+    try {
+      const companyId = request.user.companyId;
+      const batch = await fastify.prisma.batch.findFirst({
+        where: { id: request.params.id, companyId },
+        include: {
+          product: { select: { id: true, name: true, sku: true, imageUrl: true, unit: true } },
+          vendor: { select: { id: true, name: true } },
+          purchase: { select: { id: true, invoiceNumber: true, purchaseDate: true } },
+          saleItems: {
+            include: {
+              sale: { select: { id: true, invoiceNumber: true, invoiceDate: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+      if (!batch) throw new NotFoundError('Batch');
+
+      const soldQuantity = batch.purchasedQuantity - batch.availableQuantity;
+      return {
+        ...batch,
+        soldQuantity,
+        purchasePrice: Number(batch.purchasePrice),
+        mrp: Number(batch.mrp),
+      };
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
   // Stock Adjustment
   fastify.post('/adjust', async (request, reply) => {
     try {
@@ -283,7 +315,18 @@ async function inventoryRoutes(fastify) {
         return stock === 0;
       }).length;
 
-      return { totalProducts, totalStockQuantity, inventoryValue, lowStockCount, outOfStockCount };
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      const expiringSoonCount = await fastify.prisma.batch.count({
+        where: {
+          companyId,
+          status: 'ACTIVE',
+          availableQuantity: { gt: 0 },
+          expiryDate: { lte: futureDate, gte: new Date() },
+        },
+      });
+
+      return { totalProducts, totalStockQuantity, inventoryValue, lowStockCount, outOfStockCount, expiringSoonCount };
     } catch (error) {
       handleError(reply, error);
     }

@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/providers.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../data/datasources/product_remote_datasource.dart';
 import '../../data/repositories/product_repository_impl.dart';
+import '../../domain/entities/inventory_stats.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
 
@@ -157,3 +159,17 @@ class ProductFilter {
     );
   }
 }
+
+final inventoryStatsProvider = FutureProvider<InventoryStats>((ref) async {
+  final dio = ref.watch(dioProvider).dio;
+  final response = await dio.get(ApiConstants.inventoryStats);
+  final data = response.data as Map<String, dynamic>;
+  return InventoryStats(
+    totalProducts: data['totalProducts'] ?? 0,
+    totalStockQuantity: data['totalStockQuantity'] ?? 0,
+    inventoryValue: (data['inventoryValue'] as num?)?.toDouble() ?? 0.0,
+    lowStockCount: data['lowStockCount'] ?? 0,
+    outOfStockCount: data['outOfStockCount'] ?? 0,
+    expiringSoonCount: data['expiringSoonCount'] ?? 0,
+  );
+});

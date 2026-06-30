@@ -20,6 +20,9 @@ class ProductModel extends Product {
     super.status,
     required super.createdAt,
     required super.updatedAt,
+    super.firstBatchNumber,
+    super.firstExpiryDate,
+    super.firstMrp,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -32,7 +35,7 @@ class ProductModel extends Product {
       barcode: json['barcode'],
       imageUrl: json['imageUrl'],
       categoryId: json['categoryId'] ?? category?['id'],
-      categoryName: category?['name'],
+      categoryName: json['categoryName'] ?? category?['name'],
       unit: json['unit'] ?? 'PCS',
       hsnCode: json['hsnCode'],
       gstRate: _toDouble(json['gstRate']) ?? 0,
@@ -47,6 +50,11 @@ class ProductModel extends Product {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
+      firstBatchNumber: json['firstBatchNumber'],
+      firstExpiryDate: json['firstExpiryDate'] != null
+          ? DateTime.tryParse(json['firstExpiryDate'])
+          : null,
+      firstMrp: _toDouble(json['firstMrp']),
     );
   }
 

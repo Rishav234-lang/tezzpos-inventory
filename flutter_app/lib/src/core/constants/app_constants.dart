@@ -25,6 +25,28 @@ class AppRoutes {
   static const String purchaseDetail = '/purchases/detail';
   static const String addPurchase = '/purchases/add';
   static const String editPurchase = '/purchases/edit';
+  static const String duplicatePurchase = '/purchases/duplicate';
+  static const String purchaseReturn = '/purchases/return';
+
+  static const String customers = '/customers';
+  static const String customerDetail = '/customers/detail';
+  static const String addCustomer = '/customers/add';
+  static const String editCustomer = '/customers/edit';
+  static const String receivePayment = '/customers/payment';
+
+  static const String sales = '/sales';
+  static const String salesHistory = '/sales/history';
+  static const String saleDetail = '/sales/detail';
+  static const String billInvoice = '/sales/bill';
+  static const String selectSaleCustomer = '/sales/select-customer';
+  static const String saleReturn = '/sales/return';
+  static const String saleReturnDetail = '/sales/return-detail';
+
+  static const String inventory = '/inventory';
+  static const String inventoryDetail = '/inventory/detail';
+  static const String stockAdjustment = '/inventory/adjust';
+  static const String batchDetail = '/inventory/batch';
+  static const String productBatches = '/inventory/batches';
 }
 
 class AppStrings {

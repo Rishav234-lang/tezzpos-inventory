@@ -55,7 +55,10 @@ class PurchaseItemForm {
 }
 
 class CreatePurchaseScreen extends ConsumerStatefulWidget {
-  const CreatePurchaseScreen({super.key});
+  final String? purchaseId;
+  final String? duplicatePurchaseId;
+
+  const CreatePurchaseScreen({super.key, this.purchaseId, this.duplicatePurchaseId});
 
   @override
   ConsumerState<CreatePurchaseScreen> createState() => _CreatePurchaseScreenState();
@@ -72,9 +75,14 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
   final List<PurchaseItemForm> _items = [];
   String _paymentMethod = 'Cash';
   bool _isSaving = false;
+  bool _isLoading = false;
 
   final _dateFormat = DateFormat('dd MMM yyyy');
   final _currencyFormat = NumberFormat('#,##,##0.00');
+
+  bool get _isEditing => widget.purchaseId != null;
+  bool get _isDuplicating => widget.duplicatePurchaseId != null;
+  String? get _loadId => widget.purchaseId ?? widget.duplicatePurchaseId;
 
   double get _totalAmount => _items.fold(0, (s, i) => s + i.total);
   int get _totalQuantity => _items.fold(0, (s, i) => s + i.quantity);
@@ -115,6 +123,61 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       case 'PARTIAL': return AppColors.warningLight;
       default: return AppColors.errorLight;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_loadId != null) {
+      _loadPurchase();
+    }
+  }
+
+  Future<void> _loadPurchase() async {
+    setState(() => _isLoading = true);
+    final repository = ref.read(purchaseRepositoryProvider);
+    final result = await repository.getPurchaseById(_loadId!);
+    result.fold(
+      (failure) => _showError(failure.message),
+      (purchase) {
+        setState(() {
+          if (purchase.vendor != null) {
+            final v = purchase.vendor!;
+            _selectedVendor = Vendor(
+              id: v.id,
+              name: v.name,
+              mobile: v.mobile,
+              gstNumber: v.gstNumber,
+              email: v.email,
+              address: v.address,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+          }
+          if (_isDuplicating) {
+            _invoiceController.text = '${purchase.invoiceNumber}-COPY';
+            _paidAmountController.text = '0';
+          } else {
+            _invoiceController.text = purchase.invoiceNumber;
+            _paidAmountController.text = purchase.paidAmount.toStringAsFixed(2);
+          }
+          _purchaseDate = DateTime.now();
+          _notesController.text = purchase.notes ?? '';
+          for (final item in purchase.items) {
+            _items.add(PurchaseItemForm(
+              productId: item.productId,
+              name: item.productName,
+              sku: item.sku,
+              quantity: item.quantity,
+              purchasePrice: item.purchasePrice,
+              mrp: item.mrp,
+              expiryDate: item.expiryDate,
+            ));
+          }
+        });
+      },
+    );
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -228,16 +291,23 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
     };
 
     final notifier = ref.read(purchaseNotifierProvider.notifier);
-    await notifier.createPurchase(data);
+    if (_isEditing) {
+      await notifier.updatePurchase(widget.purchaseId!, data);
+    } else {
+      await notifier.createPurchase(data);
+    }
 
     if (!mounted) return;
 
     final state = ref.read(purchaseNotifierProvider);
     state.whenOrNull(
       data: (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Purchase created successfully')),
-        );
+        final msg = _isEditing
+            ? 'Purchase updated successfully'
+            : _isDuplicating
+                ? 'Purchase duplicated successfully'
+                : 'Purchase created successfully';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         context.pop();
       },
       error: (err, _) => _showError(err.toString()),
@@ -254,6 +324,25 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          ),
+          title: Text(
+            _isEditing ? 'Edit Purchase' : 'Create Purchase',
+            style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -264,7 +353,11 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
         ),
         title: Text(
-          'Create Purchase',
+          _isEditing
+              ? 'Edit Purchase'
+              : _isDuplicating
+                  ? 'Duplicate Purchase'
+                  : 'Create Purchase',
           style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -994,7 +1087,13 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
                   )
                 : const Icon(Icons.save_outlined, color: Colors.white),
             label: Text(
-              _isSaving ? 'Saving...' : 'Save Purchase',
+              _isSaving
+                  ? 'Saving...'
+                  : (_isEditing
+                      ? 'Update Purchase'
+                      : _isDuplicating
+                          ? 'Save Duplicate'
+                          : 'Save Purchase'),
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,

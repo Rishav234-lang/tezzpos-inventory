@@ -41,12 +41,24 @@ class AppRoutes {
   static const String selectSaleCustomer = '/sales/select-customer';
   static const String saleReturn = '/sales/return';
   static const String saleReturnDetail = '/sales/return-detail';
+  static const String saleReturnsHistory = '/sales/returns';
 
   static const String inventory = '/inventory';
   static const String inventoryDetail = '/inventory/detail';
   static const String stockAdjustment = '/inventory/adjust';
   static const String batchDetail = '/inventory/batch';
   static const String productBatches = '/inventory/batches';
+
+  // Super Admin
+  static const String superAdminDashboard = '/super-admin/dashboard';
+  static const String companies = '/super-admin/companies';
+  static const String companyDetail = '/super-admin/companies/detail';
+  static const String addCompany = '/super-admin/companies/add';
+  static const String editCompany = '/super-admin/companies/edit';
+  static const String assignPlan = '/super-admin/companies/assign-plan';
+  static const String plans = '/super-admin/plans';
+  static const String addPlan = '/super-admin/plans/add';
+  static const String editPlan = '/super-admin/plans/edit';
 }
 
 class AppStrings {

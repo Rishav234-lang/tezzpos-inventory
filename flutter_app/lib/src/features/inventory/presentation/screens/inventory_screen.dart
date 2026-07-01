@@ -25,6 +25,7 @@ class InventoryScreen extends ConsumerStatefulWidget {
 
 class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   Timer? _debounceTimer;
   String _activeFilter = 'All';
   String? _selectedCategoryId;
@@ -33,6 +34,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _debounceTimer?.cancel();
     super.dispose();
   }
@@ -152,7 +154,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     return Row(
       children: [
         IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () => context.go(AppRoutes.dashboard),
           icon: const Icon(Icons.arrow_back),
           color: AppColors.onSurface,
           padding: EdgeInsets.zero,
@@ -162,13 +164,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         Text('Inventory', style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
         const Spacer(),
         IconButton(
-          onPressed: () {},
+          onPressed: () => _searchFocusNode.requestFocus(),
           icon: const Icon(Icons.search, color: AppColors.onSurface, size: 24),
           padding: EdgeInsets.zero,
         ),
         IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.filter_list, color: AppColors.onSurface, size: 24),
+          onPressed: () => _showStockFilterSheet(context),
+          icon: Icon(
+            Icons.filter_list,
+            color: _activeFilter != 'All' ? AppColors.primary : AppColors.onSurface,
+            size: 24,
+          ),
           padding: EdgeInsets.zero,
         ),
       ],
@@ -184,7 +190,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         icon: Icons.inventory_2_outlined,
         iconBg: const Color(0xFFE3F2FD),
         iconColor: const Color(0xFF1976D2),
-        onTap: () {},
+        onTap: () => setState(() { _activeFilter = 'All'; _selectedCategoryId = null; }),
       ),
       _SummaryData(
         label: 'Stock Value',
@@ -193,7 +199,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         icon: Icons.account_balance_wallet_outlined,
         iconBg: const Color(0xFFE8F5E9),
         iconColor: const Color(0xFF388E3C),
-        onTap: () {},
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Total inventory value: ₹ ${_fmtL(stats.inventoryValue)}')),
+        ),
       ),
       _SummaryData(
         label: 'Low Stock',
@@ -253,9 +261,45 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     );
   }
 
+  void _showStockFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text('Filter Stock', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              for (final label in ['All', 'Low Stock', 'Expiring Soon'])
+                ListTile(
+                  title: Text(label),
+                  trailing: _activeFilter == label
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _activeFilter = label;
+                      _selectedCategoryId = null;
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchBar() {
     return TextField(
       controller: _searchController,
+      focusNode: _searchFocusNode,
       onChanged: (_) {
         _debounceTimer?.cancel();
         _debounceTimer = Timer(const Duration(milliseconds: 300), () => setState(() {}));
@@ -351,14 +395,57 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final hasFilters = _activeFilter != 'All' || _selectedCategoryId != null || _searchController.text.isNotEmpty;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.outline),
-          const SizedBox(height: 12),
-          Text('No products found', style: context.textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                hasFilters ? Icons.filter_list_off : Icons.inventory_2_outlined,
+                color: AppColors.primary.withValues(alpha: 0.5), size: 40,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              hasFilters ? 'No Matching Products' : 'No Products Yet',
+              style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasFilters
+                  ? 'Try clearing your filters or search term.'
+                  : 'Products will appear here once added.',
+              style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            if (hasFilters) ...[
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () => setState(() {
+                  _activeFilter = 'All';
+                  _selectedCategoryId = null;
+                  _searchController.clear();
+                }),
+                icon: const Icon(Icons.clear, size: 18),
+                label: const Text('Clear Filters'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

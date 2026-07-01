@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -52,6 +53,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
+            tooltip: 'New Sale',
             onPressed: () => context.push(AppRoutes.sales),
           ),
         ],
@@ -59,16 +61,33 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Search invoice no. or customer',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.outline.withValues(alpha: 0.25)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Search invoice no. or customer...',
+                  hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+                  prefixIcon: Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 20),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          color: AppColors.onSurfaceVariant,
+                          onPressed: () => setState(() { _searchController.clear(); _filter = SaleFilter(); }),
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                ),
               ),
             ),
           ),
@@ -88,7 +107,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => _buildShimmer(),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
@@ -127,14 +146,62 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   }
 
   Widget _buildEmptyState() {
+    final hasFilters = _filter.status != null || _searchController.text.isNotEmpty;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long_outlined, size: 56, color: AppColors.outline),
-          const SizedBox(height: 12),
-          Text('No sales found', style: context.textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+              child: Icon(
+                hasFilters ? Icons.search_off : Icons.receipt_long_outlined,
+                color: AppColors.primary.withValues(alpha: 0.5), size: 40),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              hasFilters ? 'No Sales Found' : 'No Sales Yet',
+              style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasFilters ? 'Try adjusting your search or filter.' : 'Your sales invoices will appear here.',
+              style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            if (hasFilters) ...[
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () => setState(() { _searchController.clear(); _filter = SaleFilter(); }),
+                icon: const Icon(Icons.clear, size: 18),
+                label: const Text('Clear Filters'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary, side: BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmer() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Shimmer.fromColors(
+        baseColor: AppColors.surfaceVariant, highlightColor: AppColors.surface,
+        child: Column(
+          children: List.generate(6, (_) => Container(
+            height: 100,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+          )),
+        ),
       ),
     );
   }
@@ -161,6 +228,10 @@ class _SaleTile extends StatelessWidget {
       statusColor = AppColors.error;
     }
 
+    final statusLabel = sale.status.toLowerCase() == 'paid' ? 'Paid'
+        : sale.status.toLowerCase() == 'partial' ? 'Partial'
+        : 'Unpaid';
+
     return InkWell(
       onTap: () => context.push('${AppRoutes.saleDetail}/${sale.id}'),
       borderRadius: BorderRadius.circular(12),
@@ -170,12 +241,12 @@ class _SaleTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
         ),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 44, height: 44,
               decoration: BoxDecoration(
                 color: const Color(0xFFE3F2FD),
                 borderRadius: BorderRadius.circular(10),
@@ -191,12 +262,12 @@ class _SaleTile extends StatelessWidget {
                     sale.invoiceNumber,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     dateFormat.format(sale.invoiceDate),
                     style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     sale.customer?.name ?? 'Walk-in',
                     style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
@@ -216,7 +287,7 @@ class _SaleTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    sale.status,
+                    statusLabel,
                     style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
                   ),
                 ),

@@ -1,20 +1,61 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:dio/dio.dart' as dio_pkg;
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../config/providers.dart';
 import '../providers/sale_providers.dart';
 
-class SaleReturnDetailScreen extends ConsumerWidget {
+class SaleReturnDetailScreen extends ConsumerStatefulWidget {
   final String returnId;
 
   const SaleReturnDetailScreen({super.key, required this.returnId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final returnAsync = ref.watch(saleReturnDetailProvider(returnId));
+  ConsumerState<SaleReturnDetailScreen> createState() => _SaleReturnDetailScreenState();
+}
+
+class _SaleReturnDetailScreenState extends ConsumerState<SaleReturnDetailScreen> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadPdf(saleReturn) async {
+    setState(() => _isDownloading = true);
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final response = await dio.get(
+        '/api/invoices/sale-returns/${widget.returnId}/pdf',
+        options: dio_pkg.Options(responseType: dio_pkg.ResponseType.bytes),
+      );
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/RET-${saleReturn.returnNumber}.pdf');
+      await file.writeAsBytes(response.data as List<int>);
+      final result = await OpenFilex.open(file.path);
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open PDF: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final returnAsync = ref.watch(saleReturnDetailProvider(widget.returnId));
     final currency = NumberFormat('#,##,##0.00');
 
     return Scaffold(
@@ -25,8 +66,13 @@ class SaleReturnDetailScreen extends ConsumerWidget {
         leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
         title: const Text('Return Invoice'),
         actions: [
-          IconButton(icon: const Icon(Icons.share), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.print), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            onPressed: () {
+              final sr = returnAsync.valueOrNull;
+              if (sr != null) _downloadPdf(sr);
+            },
+          ),
         ],
       ),
       body: returnAsync.when(
@@ -71,9 +117,16 @@ class SaleReturnDetailScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.save, size: 18),
-                label: const Text('Save PDF'),
+                onPressed: _isDownloading
+                    ? null
+                    : () {
+                        final sr = returnAsync.valueOrNull;
+                        if (sr != null) _downloadPdf(sr);
+                      },
+                icon: _isDownloading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.save, size: 18),
+                label: Text(_isDownloading ? 'Downloading...' : 'Save PDF'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

@@ -184,7 +184,9 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
   Widget _buildLogoArea(BuildContext context) {
     return Center(
       child: GestureDetector(
-        onTap: () {},
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logo upload will be available in a future update')),
+        ),
         child: Container(
           width: double.infinity,
           height: 140,

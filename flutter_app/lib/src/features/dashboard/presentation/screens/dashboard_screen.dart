@@ -71,13 +71,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
             SliverToBoxAdapter(
-              child: _buildSectionTitle(context, 'Recent Transactions'),
+              child: _buildSectionTitle(context, 'Recent Transactions', route: AppRoutes.salesHistory),
             ),
             SliverToBoxAdapter(
               child: _buildRecentTransactions(context, recentSalesAsync, recentPurchasesAsync),
             ),
             SliverToBoxAdapter(
-              child: _buildSectionTitle(context, 'Top Selling Products'),
+              child: _buildSectionTitle(context, 'Top Selling Products', route: AppRoutes.products),
             ),
             SliverToBoxAdapter(
               child: _buildTopProducts(context, topProductsAsync),
@@ -168,21 +168,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     right: 0,
                     top: 0,
                     child: Container(
-                      width: 18,
-                      height: 18,
+                      width: 8,
+                      height: 8,
                       decoration: const BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '3',
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
-                        ),
                       ),
                     ),
                   ),
@@ -190,10 +180,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               const SizedBox(width: 12),
               GestureDetector(
-                onTap: () {
-                  ref.read(authNotifierProvider.notifier).logout();
-                  context.go(AppRoutes.chooseRole);
-                },
+                onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 child: CircleAvatar(
                   radius: 18,
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
@@ -264,7 +251,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
+  Widget _buildSectionTitle(BuildContext context, String title, {String? route}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
       child: Row(
@@ -277,7 +264,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           GestureDetector(
-            onTap: () {},
+            onTap: route != null ? () => context.push(route) : null,
             child: Text(
               'View All',
               style: context.textTheme.labelMedium?.copyWith(
@@ -435,6 +422,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             _DrawerAction(icon: Icons.people, label: 'Customers', color: const Color(0xFF00838F), onTap: () => context.push(AppRoutes.customers)),
             _DrawerAction(icon: Icons.local_shipping, label: 'Vendors', color: AppColors.info, onTap: () => context.push(AppRoutes.vendors)),
             _DrawerAction(icon: Icons.receipt_long, label: 'Sales', color: const Color(0xFF1565C0), onTap: () => context.push(AppRoutes.salesHistory)),
+            _DrawerAction(icon: Icons.assignment_return, label: 'Sale Returns', color: const Color(0xFFC62828), onTap: () => context.push(AppRoutes.saleReturnsHistory)),
             _DrawerAction(icon: Icons.shopping_cart_outlined, label: 'Purchases', color: AppColors.secondary, onTap: () => context.push(AppRoutes.purchases)),
             const Divider(),
             _DrawerAction(icon: Icons.add_shopping_cart, label: 'Add Sale', color: AppColors.primary, onTap: () => context.push(AppRoutes.sales)),
@@ -458,7 +446,7 @@ class _StatsGrid extends StatelessWidget {
   const _StatsGrid({required this.stats});
 
   String formatCurrency(double value) {
-    return '₹ ${NumberFormat("#,##,###").format(value)}';
+    return '₹ ${NumberFormat("#,##,##0").format(value)}';
   }
 
   @override
@@ -693,7 +681,7 @@ class _TransactionTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₹ ${NumberFormat("#,##,###").format(transaction.totalAmount)}',
+                '₹ ${NumberFormat("#,##,##0").format(transaction.totalAmount)}',
                 style: context.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: _typeColor,
@@ -764,7 +752,7 @@ class _TopProductTile extends StatelessWidget {
             ),
           ),
           Text(
-            '₹ ${NumberFormat("#,##,###").format(product.totalRevenue)}',
+            '₹ ${NumberFormat("#,##,##0").format(product.totalRevenue)}',
             style: context.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -32,138 +33,179 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
       vendorsProvider(VendorFilter(search: _searchQuery)),
     );
 
+    final count = vendorsAsync.valueOrNull?.length ?? 0;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Vendors'),
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-        actions: [
-          FilledButton.icon(
-            onPressed: () => context.push(AppRoutes.addVendor),
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text('Add Vendor'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 100,
+            pinned: true,
+            backgroundColor: AppColors.primary,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.go(AppRoutes.dashboard),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add, color: Colors.white),
+                onPressed: () => context.push(AppRoutes.addVendor),
+                tooltip: 'Add Vendor',
+              ),
+              const SizedBox(width: 4),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text('Vendors',
+                            style: context.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text('$count vendors',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85))),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.outline.withValues(alpha: 0.25)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value.isEmpty ? null : value),
+                  decoration: InputDecoration(
+                    hintText: 'Search by name, mobile or GST...',
+                    hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+                    prefixIcon: Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 20),
+                    suffixIcon: _searchQuery != null
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            color: AppColors.onSurfaceVariant,
+                            onPressed: () { _searchController.clear(); setState(() => _searchQuery = null); },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          vendorsAsync.when(
+            data: (vendors) {
+              if (vendors.isEmpty) return SliverFillRemaining(child: _buildEmptyState());
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: _VendorTile(
+                      vendor: vendors[index],
+                      onTap: () => context.push('${AppRoutes.vendorDetail}/${vendors[index].id}'),
+                    ),
+                  ),
+                  childCount: vendors.length,
+                ),
+              );
+            },
+            loading: () => SliverToBoxAdapter(child: _buildShimmerList()),
+            error: (error, _) => SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const SizedBox(height: 12),
+                    Text('Failed to load vendors',
+                        style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Manage your vendors',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() => _searchQuery = value.isEmpty ? null : value);
-              },
-              decoration: InputDecoration(
-                hintText: 'Search vendors...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchQuery != null
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = null);
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: vendorsAsync.when(
-                data: (vendors) {
-                  if (vendors.isEmpty) {
-                    return _buildEmptyState();
-                  }
-                  return ListView.builder(
-                    itemCount: vendors.length,
-                    itemBuilder: (context, index) {
-                      final vendor = vendors[index];
-                      return _VendorTile(
-                        vendor: vendor,
-                        onTap: () => context.push(
-                          '${AppRoutes.vendorDetail}/${vendor.id}',
-                        ),
-                      );
-                    },
-                  );
-                },
-                loading: () => _buildShimmerList(),
-                error: (error, stackTrace) => Center(
-                  child: Text('Error: $error'),
-                ),
-              ),
-            ),
-          ],
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(AppRoutes.addVendor),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Add Vendor', style: TextStyle(color: Colors.white)),
       ),
     );
   }
 
   Widget _buildEmptyState() {
+    final isSearching = _searchQuery != null && _searchQuery!.isNotEmpty;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.people_outline,
-            size: 64,
-            color: AppColors.onSurfaceVariant.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No vendors found',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+              child: Icon(
+                isSearching ? Icons.search_off : Icons.store_outlined,
+                color: AppColors.primary.withValues(alpha: 0.5), size: 40),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Add your first vendor to get started',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.onSurfaceVariant,
+            const SizedBox(height: 20),
+            Text(
+              isSearching ? 'No Vendors Found' : 'No Vendors Yet',
+              style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              isSearching ? 'Try adjusting your search term.' : 'Add your first vendor to get started.',
+              style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            if (!isSearching)
+              ElevatedButton.icon(
+                onPressed: () => context.push(AppRoutes.addVendor),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Vendor'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary, foregroundColor: Colors.white, elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () { _searchController.clear(); setState(() => _searchQuery = null); },
+                icon: const Icon(Icons.clear, size: 18),
+                label: const Text('Clear Search'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary, side: BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -323,36 +365,27 @@ class _VendorTile extends StatelessWidget {
                   ],
                 ),
               ),
-              // Right side: more icon + Active badge
+              // Right side: badge + chevron
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(
-                    Icons.more_vert,
-                    color: AppColors.onSurfaceVariant,
-                    size: 20,
-                  ),
-                  const SizedBox(height: 28),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: vendor.isActive
-                          ? const Color(0xFFE8F5E9)
-                          : const Color(0xFFF5F5F5),
+                      color: vendor.isActive ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       vendor.isActive ? 'Active' : 'Inactive',
                       style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: vendor.isActive
-                            ? const Color(0xFF2E7D32)
-                            : const Color(0xFF757575),
+                        fontSize: 10, fontWeight: FontWeight.w600,
+                        color: vendor.isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant, size: 20),
                 ],
               ),
             ],
@@ -363,22 +396,8 @@ class _VendorTile extends StatelessWidget {
   }
 
   String _formatAmount(double amount) {
-    if (amount == 0) return '0';
-    if (amount >= 100000) {
-      return '${(amount / 100000).toStringAsFixed(2)}L';
-    } else if (amount >= 1000) {
-      final s = amount.toStringAsFixed(0);
-      var result = '';
-      var count = 0;
-      for (var i = s.length - 1; i >= 0; i--) {
-        if (count == 3 || (count > 3 && (count - 3) % 2 == 0)) {
-          result = ',$result';
-        }
-        result = s[i] + result;
-        count++;
-      }
-      return result;
-    }
+    if (amount >= 100000) return '${NumberFormat('#,##,##0.##').format(amount / 100000)}L';
+    if (amount >= 1000) return NumberFormat('#,##,##0').format(amount);
     return amount.toStringAsFixed(0);
   }
 

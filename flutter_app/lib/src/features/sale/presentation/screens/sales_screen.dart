@@ -106,11 +106,12 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
-        title: const Text('Sales'),
+        leading: IconButton(onPressed: () => context.go(AppRoutes.dashboard), icon: const Icon(Icons.arrow_back)),
+        title: const Text('New Sale'),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
+            tooltip: 'Sales History',
             onPressed: () => context.push(AppRoutes.salesHistory),
           ),
         ],
@@ -178,10 +179,12 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             onChanged: (v) => setState(() => _search = v.trim()),
             decoration: InputDecoration(
               hintText: 'Search product by name, SKU or barcode',
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+              prefixIcon: Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 20),
               filled: true,
               fillColor: AppColors.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
           if (_search.isNotEmpty)
@@ -193,28 +196,63 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: productsAsync.when(
-                data: (products) => ListView.builder(
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final p = products[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.primary,
-                        child: Text(p.name.isNotEmpty ? p.name[0] : 'P', style: const TextStyle(color: Colors.white)),
-                      ),
-                      title: Text(p.name),
-                      subtitle: Text('SKU: ${p.sku ?? 'N/A'} | Stock: ${p.totalStock}'),
-                      trailing: Text('₹ ${p.sellingPrice.toStringAsFixed(2)}'),
-                      onTap: () {
-                        _addToCart(p);
-                        _searchController.clear();
-                        setState(() => _search = '');
-                      },
-                    );
-                  },
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
+                data: (products) {
+                  if (products.isEmpty) return const Center(child: Text('No matching products'));
+                  return ListView.builder(
+                    itemCount: products.length,
+                    shrinkWrap: true,
+                    itemBuilder: (context, index) {
+                      final p = products[index];
+                      return Material(
+                        color: AppColors.surface,
+                        child: InkWell(
+                          onTap: () {
+                            _addToCart(p);
+                            _searchController.clear();
+                            setState(() => _search = '');
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              border: Border(bottom: BorderSide(color: AppColors.outline.withValues(alpha: 0.1))),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40, height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(child: Text(
+                                    p.name.isNotEmpty ? p.name[0].toUpperCase() : 'P',
+                                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                                  )),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                                      const SizedBox(height: 2),
+                                      Text('SKU: ${p.sku ?? 'N/A'}  •  Stock: ${p.totalStock}',
+                                          style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+                                    ],
+                                  ),
+                                ),
+                                Text('₹ ${NumberFormat('#,##,##0.00').format(p.sellingPrice)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(strokeWidth: 2))),
+                error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error: $e', style: TextStyle(color: AppColors.error)))),
               ),
             ),
         ],
@@ -224,15 +262,24 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
   Widget _buildEmptyCart() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.shopping_cart_outlined, size: 56, color: AppColors.outline),
-          const SizedBox(height: 12),
-          Text('Cart is empty', style: context.textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant)),
-          const SizedBox(height: 8),
-          Text('Search products to add items', style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+              child: Icon(Icons.shopping_cart_outlined, color: AppColors.primary.withValues(alpha: 0.5), size: 40),
+            ),
+            const SizedBox(height: 20),
+            Text('Cart is Empty', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Search products above to add items to the cart.',
+                style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }
@@ -316,7 +363,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 ],
               ),
               const SizedBox(width: 8),
-              Text('₹ ${item.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('₹ ${NumberFormat('#,##,##0.00').format(item.totalAmount)}', style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
         );
@@ -502,7 +549,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     }
 
     if (!mounted) return;
-    ref.invalidate(salesProvider(SaleFilter()));
+    ref.invalidate(salesProvider);
     context.push('${AppRoutes.billInvoice}/${sale.id}');
   }
 }

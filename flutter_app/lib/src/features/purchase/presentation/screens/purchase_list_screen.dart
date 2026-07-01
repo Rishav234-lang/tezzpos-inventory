@@ -22,6 +22,7 @@ class PurchaseListScreen extends ConsumerStatefulWidget {
 
 class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   PurchaseFilter _filter = const PurchaseFilter();
   int _currentPage = 1;
   Vendor? _selectedVendor;
@@ -31,6 +32,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -157,11 +159,11 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => _searchFocusNode.requestFocus(),
             icon: const Icon(Icons.search, color: AppColors.onSurface),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => _showStatusFilter(context),
             icon: const Icon(Icons.filter_alt_outlined, color: AppColors.onSurface),
           ),
         ],
@@ -247,6 +249,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
         ),
         child: TextField(
           controller: _searchController,
+          focusNode: _searchFocusNode,
           onChanged: _applySearch,
           decoration: InputDecoration(
             hintText: 'Search invoice / vendor',

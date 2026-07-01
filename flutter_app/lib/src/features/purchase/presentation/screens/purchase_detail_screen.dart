@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart' as dio_pkg;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -34,6 +39,151 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _downloadPurchasePdf() async {
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final purchase = ref.read(purchaseDetailProvider(widget.purchaseId)).valueOrNull;
+      final response = await dio.get(
+        '/api/invoices/purchases/${widget.purchaseId}/pdf',
+        options: dio_pkg.Options(responseType: dio_pkg.ResponseType.bytes),
+      );
+      final dir = await getTemporaryDirectory();
+      final fname = purchase != null ? 'PUR-${purchase.invoiceNumber}.pdf' : 'purchase-${widget.purchaseId}.pdf';
+      final file = File('${dir.path}/$fname');
+      await file.writeAsBytes(response.data as List<int>);
+      final result = await OpenFilex.open(file.path);
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open PDF: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    final purchase = ref.read(purchaseDetailProvider(widget.purchaseId)).valueOrNull;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              title: const Text('Edit Purchase'),
+              onTap: () { ctx.pop(); context.push('${AppRoutes.editPurchase}/${widget.purchaseId}'); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment_return, color: AppColors.primary),
+              title: const Text('Purchase Return'),
+              onTap: () { ctx.pop(); context.push('${AppRoutes.purchaseReturn}/${widget.purchaseId}'); },
+            ),
+            if (purchase != null)
+              ListTile(
+                leading: const Icon(Icons.copy_outlined, color: AppColors.primary),
+                title: const Text('Duplicate Purchase'),
+                onTap: () { ctx.pop(); context.push('${AppRoutes.duplicatePurchase}/${widget.purchaseId}'); },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRecordPaymentSheet(BuildContext context, Purchase purchase) {
+    final amountController = TextEditingController();
+    String selectedMethod = 'CASH';
+    final methods = ['CASH', 'BANK_TRANSFER', 'UPI', 'CHEQUE'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Record Payment — ${purchase.invoiceNumber}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('Balance: ₹ ${NumberFormat('#,##,##0.00').format(purchase.balanceAmount)}',
+                  style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Payment Amount (₹)',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: selectedMethod,
+                decoration: InputDecoration(
+                  labelText: 'Payment Method',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+                items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m.replaceAll('_', ' ')))).toList(),
+                onChanged: (v) => setModalState(() => selectedMethod = v ?? 'CASH'),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    final amount = double.tryParse(amountController.text.trim());
+                    if (amount == null || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    final newPaid = purchase.paidAmount + amount;
+                    await ref.read(purchaseNotifierProvider.notifier).updatePurchase(
+                      purchase.id,
+                      {'paidAmount': newPaid},
+                    );
+                    if (!context.mounted) return;
+                    final state = ref.read(purchaseNotifierProvider);
+                    if (state.hasError) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${state.error}'), backgroundColor: AppColors.error),
+                      );
+                    } else {
+                      ref.invalidate(purchaseDetailProvider(widget.purchaseId));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Payment recorded successfully')),
+                      );
+                    }
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Record Payment', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -70,7 +220,10 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
             data: (purchase) => TabBarView(
               controller: _tabController,
               children: [
-                _OverviewTab(purchase: purchase),
+                _OverviewTab(
+                  purchase: purchase,
+                  onRecordPayment: () => _showRecordPaymentSheet(context, purchase),
+                ),
                 _ProductsTab(purchase: purchase),
                 _PaymentsTab(purchase: purchase),
                 _BatchesTab(purchase: purchase),
@@ -112,11 +265,11 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => _downloadPurchasePdf(),
             icon: const Icon(Icons.share_outlined, color: AppColors.onSurface),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => _showMoreOptions(context),
             icon: const Icon(Icons.more_vert, color: AppColors.onSurface),
           ),
         ],
@@ -393,15 +546,6 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
     );
   }
 
-  void _showRecordPaymentSheet(BuildContext context, Purchase purchase) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _RecordPaymentSheet(purchase: purchase),
-    );
-  }
-
   void _showShareInvoiceSheet(BuildContext context, Purchase purchase) {
     showModalBottomSheet(
       context: context,
@@ -647,8 +791,9 @@ class _ActionButton extends StatelessWidget {
 
 class _OverviewTab extends StatelessWidget {
   final Purchase purchase;
+  final VoidCallback? onRecordPayment;
 
-  const _OverviewTab({required this.purchase});
+  const _OverviewTab({required this.purchase, this.onRecordPayment});
 
   @override
   Widget build(BuildContext context) {
@@ -681,7 +826,7 @@ class _OverviewTab extends StatelessWidget {
                 child: _buildSectionTitle('Payment Summary'),
               ),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: onRecordPayment,
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Record Payment'),
                 style: OutlinedButton.styleFrom(
@@ -701,8 +846,8 @@ class _OverviewTab extends StatelessWidget {
                 date: dateFormat.format(purchase.purchaseDate),
                 time: DateFormat('hh:mm a').format(purchase.purchaseDate),
                 amount: '₹ ${currency.format(purchase.paidAmount)}',
-                method: 'Cash',
-                by: 'By Owner',
+                method: 'Payment Received',
+                by: '',
                 isPending: false,
               ),
               if (purchase.balanceAmount > 0) ...[
@@ -1023,9 +1168,9 @@ class _ProductsTab extends StatelessWidget {
                 children: [
                   _ProductMeta(label: 'Qty', value: '${item.quantity}'),
                   const SizedBox(width: 16),
-                  _ProductMeta(label: 'Purchase Price', value: '₹ ${item.purchasePrice.toStringAsFixed(2)}'),
+                  _ProductMeta(label: 'Purchase Price', value: '₹ ${NumberFormat('#,##,##0.00').format(item.purchasePrice)}'),
                   const SizedBox(width: 16),
-                  _ProductMeta(label: 'MRP', value: '₹ ${item.mrp.toStringAsFixed(2)}'),
+                  _ProductMeta(label: 'MRP', value: '₹ ${NumberFormat('#,##,##0.00').format(item.mrp)}'),
                 ],
               ),
               if (item.expiryDate != null) ...[
@@ -1039,7 +1184,7 @@ class _ProductsTab extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'Total: ₹ ${item.totalAmount.toStringAsFixed(2)}',
+                  'Total: ₹ ${NumberFormat('#,##,##0.00').format(item.totalAmount)}',
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -1115,8 +1260,8 @@ class _PaymentsTab extends StatelessWidget {
                 date: dateFormat.format(purchase.purchaseDate),
                 time: DateFormat('hh:mm a').format(purchase.purchaseDate),
                 amount: '₹ ${currency.format(purchase.paidAmount)}',
-                method: 'Initial Payment',
-                by: 'By Owner',
+                method: 'Payment Received',
+                by: '',
                 isPending: false,
               ),
               if (purchase.balanceAmount > 0) ...[
@@ -1245,7 +1390,7 @@ class _BatchesTab extends StatelessWidget {
                   const SizedBox(width: 20),
                   _ProductMeta(
                     label: 'Price',
-                    value: '₹ ${batch.purchasePrice.toStringAsFixed(2)}',
+                    value: '₹ ${NumberFormat('#,##,##0.00').format(batch.purchasePrice)}',
                   ),
                 ],
               ),
@@ -1264,18 +1409,54 @@ class _BatchesTab extends StatelessWidget {
   }
 }
 
-class _InvoiceTab extends ConsumerWidget {
+class _InvoiceTab extends ConsumerStatefulWidget {
   final Purchase purchase;
 
   const _InvoiceTab({required this.purchase});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_InvoiceTab> createState() => _InvoiceTabState();
+}
+
+class _InvoiceTabState extends ConsumerState<_InvoiceTab> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadPdf() async {
+    setState(() => _isDownloading = true);
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final response = await dio.get(
+        '/api/invoices/purchases/${widget.purchase.id}/pdf',
+        options: dio_pkg.Options(responseType: dio_pkg.ResponseType.bytes),
+      );
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/PUR-${widget.purchase.invoiceNumber}.pdf');
+      await file.writeAsBytes(response.data as List<int>);
+      final result = await OpenFilex.open(file.path);
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open PDF: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd MMM yyyy');
     final currency = NumberFormat('#,##,##0.00');
     final authState = ref.watch(authStateProvider).value;
     final companyName = authState?.user?.companyName ?? 'TezzPOS Retail';
 
+    final purchase = widget.purchase;
     final statusColor = purchase.status == 'PAID'
         ? const Color(0xFF2E7D32)
         : purchase.status == 'PARTIAL'
@@ -1310,11 +1491,6 @@ class _InvoiceTab extends ConsumerWidget {
                   style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
                 Text('Smart Inventory, Easy Business',
-                  style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 6),
-                Text('123, Business Street, City - 400001',
-                  style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant)),
-                Text('GSTIN: 24ABCDE1234F1Z5',
                   style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant)),
                 const SizedBox(height: 16),
                 Center(
@@ -1407,7 +1583,7 @@ class _InvoiceTab extends ConsumerWidget {
                           child: Text('${item.quantity}', textAlign: TextAlign.center,
                             style: context.textTheme.bodySmall)),
                         Expanded(
-                          child: Text('₹ ${item.purchasePrice.toStringAsFixed(2)}', textAlign: TextAlign.right,
+                          child: Text('₹ ${NumberFormat('#,##,##0.00').format(item.purchasePrice)}', textAlign: TextAlign.right,
                             style: context.textTheme.bodySmall)),
                         Expanded(
                           child: Text('₹ ${currency.format(item.totalAmount)}', textAlign: TextAlign.right,
@@ -1482,9 +1658,11 @@ class _InvoiceTab extends ConsumerWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.download, size: 18),
-                  label: const Text('Download PDF'),
+                  onPressed: _isDownloading ? null : _downloadPdf,
+                  icon: _isDownloading
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.download, size: 18),
+                  label: Text(_isDownloading ? 'Downloading...' : 'Download PDF'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
@@ -1496,7 +1674,7 @@ class _InvoiceTab extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: _isDownloading ? null : _downloadPdf,
                   icon: const Icon(Icons.share, size: 18),
                   label: const Text('Share'),
                   style: OutlinedButton.styleFrom(

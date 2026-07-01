@@ -142,16 +142,59 @@ class CategoryDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Info fields
-                _InfoRow(icon: Icons.calendar_today, label: 'Created On', value: dateFormat.format(category.createdAt)),
-                _InfoRow(icon: Icons.person_outline, label: 'Created By', value: 'Owner'),
-                _InfoRow(icon: Icons.edit_note, label: 'Last Updated', value: dateFormat.format(category.updatedAt)),
                 const SizedBox(height: 16),
-                _InfoRow(icon: Icons.description_outlined, label: 'Description', value: category.description ?? 'No description'),
-                const SizedBox(height: 16),
-                _InfoRow(icon: Icons.shield_outlined, label: 'Status', value: category.isActive ? 'Active' : 'Inactive'),
-                const SizedBox(height: 24),
+                // Description card
+                if (category.description != null && category.description!.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: AppColors.primary.withValues(alpha: 0.7)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            category.description!,
+                            style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurface),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Metadata card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                  ),
+                  child: Column(
+                    children: [
+                      _InfoRow(icon: Icons.calendar_today_outlined, label: 'Created On', value: dateFormat.format(category.createdAt)),
+                      const Divider(height: 16, thickness: 0.5),
+                      _InfoRow(icon: Icons.update, label: 'Last Updated', value: dateFormat.format(category.updatedAt)),
+                      const Divider(height: 16, thickness: 0.5),
+                      _InfoRow(
+                        icon: Icons.circle,
+                        label: 'Status',
+                        value: category.isActive ? 'Active' : 'Inactive',
+                        valueColor: category.isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                        iconColor: category.isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                        iconSize: 10,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
                 // Items section
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -398,40 +441,49 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color? valueColor;
+  final Color? iconColor;
+  final double? iconSize;
 
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.iconColor,
+    this.iconSize,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: AppColors.onSurfaceVariant),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: iconSize ?? 16, color: iconColor ?? AppColors.onSurfaceVariant),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  fontSize: 11,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                value,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: valueColor,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

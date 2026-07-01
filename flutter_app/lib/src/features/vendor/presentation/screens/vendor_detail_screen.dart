@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../purchase/presentation/providers/purchase_providers.dart';
 import '../../domain/entities/vendor.dart';
 import '../providers/vendor_providers.dart';
 
@@ -33,6 +35,92 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _showMakePaymentDialog(BuildContext context, WidgetRef ref, Vendor vendor) {
+    final amountController = TextEditingController();
+    String selectedMethod = 'CASH';
+    final methods = ['CASH', 'BANK_TRANSFER', 'UPI', 'CHEQUE'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Record Payment to ${vendor.name}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Amount (₹)',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: selectedMethod,
+                decoration: InputDecoration(
+                  labelText: 'Payment Method',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+                items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m.replaceAll('_', ' ')))).toList(),
+                onChanged: (v) => setModalState(() => selectedMethod = v ?? 'CASH'),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    final amount = double.tryParse(amountController.text.trim());
+                    if (amount == null || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    await ref.read(purchaseNotifierProvider.notifier).recordPayment({
+                      'vendorId': widget.vendorId,
+                      'amount': amount,
+                      'paymentMethod': selectedMethod,
+                      'paymentDate': DateTime.now().toIso8601String(),
+                    });
+                    if (!context.mounted) return;
+                    final state = ref.read(purchaseNotifierProvider);
+                    if (state.hasError) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${state.error}'), backgroundColor: AppColors.error),
+                      );
+                    } else {
+                      ref.invalidate(vendorLedgerProvider(widget.vendorId));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Payment recorded successfully')),
+                      );
+                    }
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Record Payment', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -308,21 +396,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     final purchases = (ledger?['purchases'] as List<dynamic>?) ?? [];
     final totalCount = purchases.length;
 
-    String fmt(double v) {
-      if (v == 0) return '₹ 0';
-      if (v >= 100000) return '₹ ${(v / 100000).toStringAsFixed(2)}L';
-      final s = v.toStringAsFixed(0);
-      var result = '';
-      var count = 0;
-      for (var i = s.length - 1; i >= 0; i--) {
-        if (count == 3 || (count > 3 && (count - 3) % 2 == 0)) {
-          result = ',$result';
-        }
-        result = s[i] + result;
-        count++;
-      }
-      return '₹ $result';
-    }
+    final fmt = NumberFormat('#,##,##0');
 
     return Column(
       children: [
@@ -331,7 +405,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             _buildSummaryCard(
               context,
               label: 'Total Purchase',
-              value: fmt(totalPurchase is num ? totalPurchase.toDouble() : 0),
+              value: fmt.format(totalPurchase is num ? totalPurchase.toDouble() : 0),
               icon: Icons.receipt_outlined,
               iconBg: const Color(0xFFE3F2FD),
               iconColor: const Color(0xFF1565C0),
@@ -340,7 +414,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             _buildSummaryCard(
               context,
               label: 'Total Paid',
-              value: fmt(totalPaid is num ? totalPaid.toDouble() : 0),
+              value: fmt.format(totalPaid is num ? totalPaid.toDouble() : 0),
               icon: Icons.payments_outlined,
               iconBg: const Color(0xFFE8F5E9),
               iconColor: const Color(0xFF2E7D32),
@@ -353,7 +427,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             _buildSummaryCard(
               context,
               label: 'Outstanding',
-              value: fmt(outstanding is num ? outstanding.toDouble() : 0),
+              value: fmt.format(outstanding is num ? outstanding.toDouble() : 0),
               icon: Icons.warning_amber_outlined,
               iconBg: const Color(0xFFFFEBEE),
               iconColor: const Color(0xFFC62828),
@@ -397,7 +471,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => context.push(AppRoutes.purchases),
                       child: const Text('View All'),
                     ),
                   ],
@@ -423,7 +497,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => context.push(AppRoutes.purchases),
                       child: const Text('View All'),
                     ),
                   ],
@@ -521,7 +595,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
               Row(
                 children: [
                   Text(
-                    '₹ ${totalVal.toStringAsFixed(0)}',
+                    '₹ ${NumberFormat('#,##,##0').format(totalVal)}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -551,14 +625,14 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
               Expanded(
                 child: _buildPurchaseMiniCol(
                   'Paid',
-                  '₹ ${paidVal.toStringAsFixed(0)}',
+                  '₹ ${NumberFormat('#,##,##0').format(paidVal)}',
                   valueColor: const Color(0xFF2E7D32),
                 ),
               ),
               Expanded(
                 child: _buildPurchaseMiniCol(
                   'Due',
-                  '₹ ${due.toStringAsFixed(0)}',
+                  '₹ ${NumberFormat('#,##,##0').format(due)}',
                   valueColor: due > 0 ? const Color(0xFFC62828) : const Color(0xFF2E7D32),
                 ),
               ),
@@ -631,10 +705,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
       statusText = 'Paid';
     } else if (due > 0 && paidVal > 0) {
       statusColor = const Color(0xFFE65100);
-      statusText = 'Due ₹${due.toStringAsFixed(0)}';
+      statusText = 'Due ₹${NumberFormat('#,##,##0').format(due)}';
     } else {
       statusColor = const Color(0xFFC62828);
-      statusText = 'Due ₹${due.toStringAsFixed(0)}';
+      statusText = 'Due ₹${NumberFormat('#,##,##0').format(due)}';
     }
 
     return Container(
@@ -673,7 +747,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₹ ${totalVal.toStringAsFixed(0)}',
+                '₹ ${NumberFormat('#,##,##0').format(totalVal)}',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1000,21 +1074,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
   }
 
   String _formatAmount(double amount) {
-    if (amount == 0) return '0';
-    if (amount >= 100000) {
-      return '${(amount / 100000).toStringAsFixed(2)}L';
-    }
-    final s = amount.toStringAsFixed(0);
-    var result = '';
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count == 3 || (count > 3 && (count - 3) % 2 == 0)) {
-        result = ',$result';
-      }
-      result = s[i] + result;
-      count++;
-    }
-    return result;
+    if (amount >= 100000) return '${NumberFormat('#,##,##0.##').format(amount / 100000)}L';
+    if (amount >= 1000) return NumberFormat('#,##,##0').format(amount);
+    return amount.toStringAsFixed(0);
   }
 
   Widget _buildBottomActions(BuildContext context, WidgetRef ref, Vendor vendor) {
@@ -1034,7 +1096,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () {},
+                    onPressed: () => context.push(AppRoutes.addPurchase),
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Create Purchase'),
                     style: FilledButton.styleFrom(
@@ -1050,7 +1112,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () {},
+                    onPressed: () => _showMakePaymentDialog(context, ref, vendor),
                     icon: const Icon(Icons.lock_outline, size: 18),
                     label: const Text('Make Payment'),
                     style: FilledButton.styleFrom(

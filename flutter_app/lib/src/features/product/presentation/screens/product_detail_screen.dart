@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -157,48 +158,108 @@ class ProductDetailScreen extends ConsumerWidget {
                 // Price & stock cards
                 Row(
                   children: [
-                    _buildInfoCard(
-                      context,
-                      label: 'Cost Price',
-                      value: '₹${product.costPrice.toStringAsFixed(2)}',
-                    ),
-                    const SizedBox(width: 12),
-                    _buildInfoCard(
-                      context,
-                      label: 'Selling Price',
-                      value: '₹${product.sellingPrice.toStringAsFixed(2)}',
-                    ),
-                    const SizedBox(width: 12),
-                    _buildInfoCard(
-                      context,
-                      label: 'Current Stock',
-                      value: product.totalStock.toString(),
-                    ),
+                    _buildInfoCard(context, label: 'Cost Price',
+                        value: '₹ ${NumberFormat('#,##,##0.00').format(product.costPrice)}'),
+                    const SizedBox(width: 8),
+                    _buildInfoCard(context, label: 'Selling Price',
+                        value: '₹ ${NumberFormat('#,##,##0.00').format(product.sellingPrice)}', highlight: true),
+                    const SizedBox(width: 8),
+                    _buildInfoCard(context, label: 'MRP',
+                        value: product.firstMrp != null
+                            ? '₹ ${NumberFormat('#,##,##0.00').format(product.firstMrp)}'
+                            : '—'),
+                    const SizedBox(width: 8),
+                    _buildInfoCard(context, label: 'In Stock',
+                        value: '${product.totalStock}',
+                        valueColor: product.isOutOfStock
+                            ? AppColors.error
+                            : product.isLowStock
+                                ? const Color(0xFFE65100)
+                                : const Color(0xFF2E7D32)),
                   ],
                 ),
                 const SizedBox(height: 20),
+                // Product Information card
                 _buildSectionTitle('Product Information'),
-                const SizedBox(height: 12),
-                _buildBarcodeRow(context, product.barcode ?? 'N/A'),
-                _buildInfoRow('Category', product.categoryName ?? 'N/A'),
-                _buildInfoRow('Unit', product.unit),
-                _buildInfoRow('HSN Code', product.hsnCode ?? 'N/A'),
-                _buildInfoRow('Tax', '${product.gstRate.toStringAsFixed(0)}% GST'),
-                _buildInfoRow(
-                    'Description', product.description ?? 'No description'),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildBarcodeRow(context, product.barcode),
+                      const Divider(height: 16, thickness: 0.5),
+                      _buildInfoRow('Category', product.categoryName ?? 'Uncategorized'),
+                      const Divider(height: 16, thickness: 0.5),
+                      _buildInfoRow('Unit', product.unit),
+                      if (product.hsnCode != null && product.hsnCode!.isNotEmpty) ...[
+                        const Divider(height: 16, thickness: 0.5),
+                        _buildInfoRow('HSN Code', product.hsnCode!),
+                      ],
+                      const Divider(height: 16, thickness: 0.5),
+                      _buildInfoRow('GST Rate', '${product.gstRate.toStringAsFixed(0)}%'),
+                      if (product.description != null && product.description!.isNotEmpty) ...[
+                        const Divider(height: 16, thickness: 0.5),
+                        _buildInfoRow('Description', product.description!, multiLine: true),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Inventory card
                 _buildSectionTitle('Inventory'),
-                const SizedBox(height: 12),
-                _buildInfoRow('Available Stock', '${product.totalStock}'),
-                _buildInfoRow('Reserved Stock', '0'),
-                _buildInfoRow('Reorder Level', '${product.minStockLevel}'),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow('Available Stock', '${product.totalStock}',
+                          valueColor: product.isOutOfStock
+                              ? AppColors.error
+                              : product.isLowStock
+                                  ? const Color(0xFFE65100)
+                                  : const Color(0xFF2E7D32)),
+                      const Divider(height: 16, thickness: 0.5),
+                      _buildInfoRow('Reorder Level', '${product.minStockLevel}'),
+                      const Divider(height: 16, thickness: 0.5),
+                      _buildInfoRow('Stock Value (Cost)',
+                          '₹ ${NumberFormat('#,##,##0.00').format(product.stockValue)}'),
+                      if (product.stockValueMrp > 0) ...[
+                        const Divider(height: 16, thickness: 0.5),
+                        _buildInfoRow('Stock Value (MRP)',
+                            '₹ ${NumberFormat('#,##,##0.00').format(product.stockValueMrp)}'),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Timestamps card
                 _buildSectionTitle('Timestamps'),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                    'Created On', dateFormat.format(product.createdAt)),
-                _buildInfoRow(
-                    'Last Updated', dateFormat.format(product.updatedAt)),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow('Created On', dateFormat.format(product.createdAt)),
+                      const Divider(height: 16, thickness: 0.5),
+                      _buildInfoRow('Last Updated', dateFormat.format(product.updatedAt)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 80),
               ],
             ),
@@ -209,32 +270,38 @@ class ProductDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildInfoCard(BuildContext context,
-      {required String label, required String value}) {
+      {required String label, required String value, bool highlight = false, Color? valueColor}) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: highlight ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppColors.outline.withValues(alpha: 0.15),
+            color: highlight ? AppColors.primary.withValues(alpha: 0.25) : AppColors.outline.withValues(alpha: 0.15),
           ),
         ),
         child: Column(
           children: [
             Text(
               value,
-              style: context.textTheme.titleMedium?.copyWith(
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+                color: valueColor ?? (highlight ? AppColors.primary : AppColors.onSurface),
+                fontSize: 13,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               label,
               style: context.textTheme.labelSmall?.copyWith(
                 color: AppColors.onSurfaceVariant,
+                fontSize: 10,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -243,75 +310,67 @@ class ProductDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: AppColors.onSurface,
-      ),
+    return Row(
+      children: [
+        Container(width: 3, height: 16, decoration: BoxDecoration(
+          color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 8),
+        Text(title, style: const TextStyle(
+          fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+      ],
     );
   }
 
-  Widget _buildBarcodeRow(BuildContext context, String barcode) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Barcode',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-          Row(
+  Widget _buildBarcodeRow(BuildContext context, String? barcode) {
+    final display = barcode ?? 'N/A';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text('Barcode', style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+        GestureDetector(
+          onTap: barcode != null
+              ? () {
+                  Clipboard.setData(ClipboardData(text: barcode));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Barcode copied to clipboard'), duration: Duration(seconds: 1)),
+                  );
+                }
+              : null,
+          child: Row(
             children: [
-              Text(
-                barcode,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onSurface,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.content_copy,
-                size: 14,
-                color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
-              ),
+              Text(display,
+                  style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+              if (barcode != null) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.content_copy, size: 14,
+                    color: AppColors.primary.withValues(alpha: 0.7)),
+              ],
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
-            ),
-          ),
-        ],
-      ),
+  Widget _buildInfoRow(String label, String value, {Color? valueColor, bool multiLine = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: multiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+        const SizedBox(width: 16),
+        Flexible(
+          child: Text(value,
+              style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600,
+                color: valueColor ?? AppColors.onSurface),
+              textAlign: TextAlign.end,
+              maxLines: multiLine ? 3 : 1,
+              overflow: TextOverflow.ellipsis),
+        ),
+      ],
     );
   }
 
@@ -463,8 +522,7 @@ class ProductDetailScreen extends ConsumerWidget {
                         ),
                       );
                     } else {
-                      ref.invalidate(productsProvider(
-                          ProductFilter(search: null, page: 1, limit: 20)));
+                      ref.invalidate(productsProvider);
                       context.pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Product deleted')),

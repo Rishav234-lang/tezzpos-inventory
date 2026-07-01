@@ -28,7 +28,7 @@ class SaleDetailScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () {},
+            onPressed: () => _showOptions(context),
           ),
         ],
       ),
@@ -60,12 +60,36 @@ class SaleDetailScreen extends ConsumerWidget {
     );
   }
 
+  void _showOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.receipt_long, color: AppColors.primary),
+              title: const Text('View Bill / Invoice'),
+              onTap: () { ctx.pop(); context.push('${AppRoutes.billInvoice}/$saleId'); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment_return, color: AppColors.primary),
+              title: const Text('Create Return'),
+              onTap: () { ctx.pop(); context.push('${AppRoutes.saleReturn}/$saleId'); },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context, sale) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
@@ -98,7 +122,9 @@ class SaleDetailScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              sale.status,
+              sale.status.toLowerCase() == 'paid' ? 'Paid'
+                  : sale.status.toLowerCase() == 'partial' ? 'Partial'
+                  : 'Unpaid',
               style: TextStyle(color: _statusColor(sale.status), fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
@@ -139,6 +165,7 @@ class SaleDetailScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,6 +185,7 @@ class SaleDetailScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,6 +239,7 @@ class SaleDetailScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
       ),
       child: Column(
         children: [

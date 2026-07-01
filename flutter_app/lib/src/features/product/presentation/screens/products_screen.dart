@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/api_constants.dart';
@@ -46,75 +47,126 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final productsAsync = ref.watch(productsProvider(filter));
     final categoriesAsync = ref.watch(categoriesProvider(''));
 
+    final totalCount = productsAsync.valueOrNull?.length ?? 0;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            floating: true,
-            snap: true,
-            title: const Text('Products'),
+            expandedHeight: 100,
+            pinned: true,
+            backgroundColor: AppColors.primary,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.go(AppRoutes.dashboard),
+            ),
             actions: [
               IconButton(
+                icon: const Icon(Icons.add, color: Colors.white),
                 onPressed: () => context.push(AppRoutes.addProduct),
-                icon: const Icon(Icons.add),
+                tooltip: 'Add Product',
               ),
+              const SizedBox(width: 4),
             ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text('Products',
+                            style: context.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text(
+                          _selectedCategoryId == null
+                              ? '$totalCount products'
+                              : '$totalCount in selected category',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSearchBar(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _buildCategoryChips(categoriesAsync),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   productsAsync.when(
                     data: (products) => _buildProductList(products),
                     loading: () => _buildShimmerList(),
-                    error: (error, _) => Center(
-                      child: Text('Error: $error'),
+                    error: (error, _) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                            const SizedBox(height: 12),
+                            Text('Failed to load products',
+                                style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.addProduct),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Product'),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Add Product', style: TextStyle(color: Colors.white)),
       ),
     );
   }
 
   Widget _buildSearchBar() {
-    return TextField(
-      controller: _searchController,
-      onChanged: (value) {
-        _debouncer.run(() => setState(() {}));
-      },
-      decoration: InputDecoration(
-        hintText: 'Search products...',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {});
-                },
-              )
-            : null,
-        filled: true,
-        fillColor: AppColors.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          _debouncer.run(() => setState(() {}));
+        },
+        decoration: InputDecoration(
+          hintText: 'Search by name, SKU or barcode...',
+          hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+          prefixIcon: Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 20),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  color: AppColors.onSurfaceVariant,
+                  onPressed: () { _searchController.clear(); setState(() {}); },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         ),
       ),
     );
@@ -162,19 +214,61 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   Widget _buildProductList(List<Product> products) {
     if (products.isEmpty) {
-      return Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            Icon(Icons.inventory_2_outlined,
-                size: 56, color: AppColors.outline),
-            const SizedBox(height: 12),
-            Text(
-              'No products found',
-              style: context.textTheme.titleMedium
-                  ?.copyWith(color: AppColors.onSurfaceVariant),
-            ),
-          ],
+      final isSearching = _searchController.text.isNotEmpty || _selectedCategoryId != null;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isSearching ? Icons.search_off : Icons.inventory_2_outlined,
+                  color: AppColors.primary.withValues(alpha: 0.5), size: 40,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                isSearching ? 'No Products Found' : 'No Products Yet',
+                style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isSearching ? 'Try adjusting your search or filter.' : 'Start by adding your first product.',
+                style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              if (!isSearching)
+                ElevatedButton.icon(
+                  onPressed: () => context.push(AppRoutes.addProduct),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Product'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+                    elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: () => setState(() { _searchController.clear(); _selectedCategoryId = null; }),
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear Filters'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+            ],
+          ),
         ),
       );
     }
@@ -236,14 +330,75 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   }
 }
 
-class _ProductTile extends StatelessWidget {
+class _ProductTile extends ConsumerWidget {
   final Product product;
   final VoidCallback onTap;
 
   const _ProductTile({required this.product, required this.onTap});
 
+  void _showOptions(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, color: AppColors.primary),
+              title: const Text('Edit Product'),
+              onTap: () {
+                context.pop();
+                context.push('${AppRoutes.editProduct}/${product.id}');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: AppColors.error),
+              title: const Text('Delete Product'),
+              onTap: () {
+                context.pop();
+                _confirmDelete(context, ref);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Text('Delete "${product.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(productNotifierProvider.notifier).deleteProduct(product.id);
+              if (!context.mounted) return;
+              final state = ref.read(productNotifierProvider);
+              if (state.hasError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${state.error}'), backgroundColor: AppColors.error),
+                );
+              } else {
+                ref.invalidate(productsProvider);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Product deleted')),
+                );
+              }
+            },
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: InkWell(
@@ -317,7 +472,7 @@ class _ProductTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₹${product.sellingPrice.toStringAsFixed(2)}',
+                    '₹ ${NumberFormat('#,##,##0.00').format(product.sellingPrice)}',
                     style: context.textTheme.bodyMedium?.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
@@ -325,21 +480,15 @@ class _ProductTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'Stock: ${product.totalStock}',
-                    style: context.textTheme.labelSmall?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
-                  ),
+                  _buildStockBadge(context, product),
                 ],
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.more_vert,
-                color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
-                size: 20,
+              IconButton(
+                onPressed: () => _showOptions(context, ref),
+                icon: const Icon(Icons.more_vert, size: 20),
+                color: AppColors.onSurfaceVariant,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
             ],
           ),

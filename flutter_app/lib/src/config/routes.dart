@@ -30,12 +30,20 @@ import '../features/purchase/presentation/screens/purchase_detail_screen.dart';
 import '../features/purchase/presentation/screens/purchase_list_screen.dart';
 import '../features/purchase/presentation/screens/purchase_return_screen.dart';
 import '../features/sale/presentation/screens/bill_invoice_screen.dart';
+import '../features/sale/presentation/screens/sale_returns_history_screen.dart';
 import '../features/sale/presentation/screens/create_sale_return_screen.dart';
 import '../features/sale/presentation/screens/sale_detail_screen.dart';
 import '../features/sale/presentation/screens/sale_return_detail_screen.dart';
 import '../features/sale/presentation/screens/sales_history_screen.dart';
 import '../features/sale/presentation/screens/sales_screen.dart';
 import '../features/sale/presentation/screens/select_customer_screen.dart';
+import '../features/super_admin/presentation/screens/add_edit_company_screen.dart';
+import '../features/super_admin/presentation/screens/add_edit_plan_screen.dart';
+import '../features/super_admin/presentation/screens/assign_plan_screen.dart';
+import '../features/super_admin/presentation/screens/companies_list_screen.dart';
+import '../features/super_admin/presentation/screens/company_detail_screen.dart';
+import '../features/super_admin/presentation/screens/plans_list_screen.dart';
+import '../features/super_admin/presentation/screens/super_admin_dashboard_screen.dart';
 import '../features/vendor/presentation/screens/vendors_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
@@ -64,6 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.forgotPassword;
 
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
+      final isSuperAdmin = authState.valueOrNull?.user?.isSuperAdmin ?? false;
 
       // Read onboarding status directly from prefs to avoid stale provider state
       final prefs = ref.read(sharedPreferencesProvider);
@@ -74,7 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Authenticated user trying to access auth/onboarding/splash pages
       if (isAuthenticated && (isAuthRoute || isSplash || isOnboarding)) {
-        return AppRoutes.dashboard;
+        return isSuperAdmin ? AppRoutes.superAdminDashboard : AppRoutes.dashboard;
       }
 
       // Not onboarded yet
@@ -85,6 +94,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Unauthenticated user trying to access protected pages
       if (!isAuthenticated && !isAuthRoute && !isSplash && !isOnboarding) {
         return AppRoutes.chooseRole;
+      }
+
+      // Role-based access control
+      final isSuperAdminRoute = state.matchedLocation.startsWith('/super-admin');
+      if (isAuthenticated && isSuperAdmin && !isSuperAdminRoute) {
+        return AppRoutes.superAdminDashboard;
+      }
+      if (isAuthenticated && !isSuperAdmin && isSuperAdminRoute) {
+        return AppRoutes.dashboard;
       }
 
       return null;
@@ -117,6 +135,54 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.dashboard,
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.superAdminDashboard,
+        builder: (context, state) => const SuperAdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.companies,
+        builder: (context, state) => const CompaniesListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.addCompany,
+        builder: (context, state) => const AddEditCompanyScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editCompany}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditCompanyScreen(companyId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.companyDetail}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CompanyDetailScreen(companyId: id);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.assignPlan}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AssignPlanScreen(companyId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.plans,
+        builder: (context, state) => const PlansListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.addPlan,
+        builder: (context, state) => const AddEditPlanScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editPlan}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditPlanScreen(planId: id);
+        },
       ),
       GoRoute(
         path: AppRoutes.categories,
@@ -274,6 +340,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return BillInvoiceScreen(saleId: id);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.saleReturnsHistory,
+        builder: (context, state) => const SaleReturnsHistoryScreen(),
       ),
       GoRoute(
         path: '${AppRoutes.saleReturn}/:id',

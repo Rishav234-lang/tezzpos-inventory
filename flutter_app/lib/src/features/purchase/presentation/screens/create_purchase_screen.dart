@@ -362,7 +362,20 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('How to Create a Purchase'),
+                content: const Text(
+                  '1. Select Vendor & Invoice details\n'
+                  '2. Add products with quantity & price\n'
+                  '3. Enter payment details\n'
+                  '4. Add any notes if needed\n'
+                  '5. Tap Save to complete',
+                ),
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+              ),
+            ),
             icon: const Icon(Icons.description_outlined, color: AppColors.primary),
           ),
         ],

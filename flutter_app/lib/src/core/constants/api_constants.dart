@@ -1,6 +1,6 @@
 class ApiConstants {
   // Change this to your backend URL
-  static const String baseUrl = 'https://switch-leslie-province-wanna.trycloudflare.com';
+  static const String baseUrl = 'http://localhost:4000';
 
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

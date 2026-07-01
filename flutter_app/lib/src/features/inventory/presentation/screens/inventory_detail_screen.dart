@@ -35,6 +35,34 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
+  void _showOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.tune, color: AppColors.primary),
+              title: const Text('Stock Adjustment'),
+              onTap: () { ctx.pop(); context.push(AppRoutes.stockAdjustment); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.view_list_outlined, color: AppColors.primary),
+              title: const Text('View Batches'),
+              onTap: () { ctx.pop(); context.push('${AppRoutes.productBatches}/$productId'); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              title: const Text('Edit Product'),
+              onTap: () { ctx.pop(); context.push('${AppRoutes.editProduct}/$productId'); },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent(BuildContext context, WidgetRef ref, Product product) {
     final currency = NumberFormat('#,##,##0.00');
     final dateFormat = DateFormat('dd MMM yyyy');
@@ -81,7 +109,7 @@ class InventoryDetailScreen extends ConsumerWidget {
               icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () => _showOptions(context),
               icon: const Icon(Icons.more_vert),
             ),
           ],
@@ -252,7 +280,14 @@ class InventoryDetailScreen extends ConsumerWidget {
   Widget _divider() => Container(width: 1, height: 48, color: AppColors.outline.withValues(alpha: 0.15));
 
   Widget _buildSectionTitle(BuildContext context, String title) {
-    return Text(title, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold));
+    return Row(
+      children: [
+        Container(width: 3, height: 18,
+            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 8),
+        Text(title, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+      ],
+    );
   }
 
   Widget _buildStockOverview(BuildContext context, Product product, NumberFormat currency,
@@ -315,40 +350,42 @@ class InventoryDetailScreen extends ConsumerWidget {
         label: 'Sales\nHistory',
         iconBg: const Color(0xFFF3E5F5),
         iconColor: const Color(0xFF6A1B9A),
-        onTap: () {},
+        onTap: () => context.push(AppRoutes.salesHistory),
       ),
     ];
 
     return Row(
       children: actions
           .map((a) => Expanded(
-                child: GestureDetector(
-                  onTap: a.onTap,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Material(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: a.onTap,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: a.iconBg, borderRadius: BorderRadius.circular(12)),
-                          child: Icon(a.icon, size: 20, color: a.iconColor),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
                         ),
-                        const SizedBox(height: 8),
-                        Text(a.label,
-                            textAlign: TextAlign.center,
-                            style: context.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10,
-                              height: 1.3,
-                            )),
-                      ],
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40, height: 40,
+                              decoration: BoxDecoration(color: a.iconBg, borderRadius: BorderRadius.circular(12)),
+                              child: Icon(a.icon, size: 20, color: a.iconColor),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(a.label,
+                                textAlign: TextAlign.center,
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w600, fontSize: 10, height: 1.3)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

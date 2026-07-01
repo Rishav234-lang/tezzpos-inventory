@@ -67,6 +67,10 @@ dependencies:
   dartz: ^0.10.1
   equatable: ^2.0.7
 
+  # PDF & File
+  path_provider: ^2.1.5
+  open_filex: ^4.4.0
+
   # Permission & Device
   permission_handler: ^11.4.0
   connectivity_plus: ^6.1.4

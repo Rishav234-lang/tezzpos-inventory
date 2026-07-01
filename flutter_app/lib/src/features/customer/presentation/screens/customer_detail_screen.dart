@@ -19,12 +19,10 @@ class CustomerDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
-  late final _customerAsync = ref.watch(customerDetailProvider(widget.customerId));
-  late final _ledgerAsync = ref.watch(customerLedgerProvider(widget.customerId));
-  late final _salesAsync = ref.watch(customerSalesProvider(widget.customerId));
-
   @override
   Widget build(BuildContext context) {
+    final customerAsync = ref.watch(customerDetailProvider(widget.customerId));
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -39,12 +37,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           ),
         ],
       ),
-      body: _customerAsync.when(
+      body: customerAsync.when(
         data: (customer) => _buildContent(context, customer),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
-      bottomNavigationBar: _customerAsync.when(
+      bottomNavigationBar: customerAsync.when(
         data: (customer) => _buildBottomBar(context, customer),
         loading: () => null,
         error: (_, _) => null,
@@ -83,6 +81,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       ),
     );
   }
+
+  AsyncValue<Map<String, dynamic>> get _ledgerAsync => ref.watch(customerLedgerProvider(widget.customerId));
+  AsyncValue<Map<String, dynamic>> get _salesAsync => ref.watch(customerSalesProvider(widget.customerId));
 
   Widget _buildHeader(BuildContext context, Customer customer) {
     return Container(
@@ -229,12 +230,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Row(
       children: [
+        Container(width: 3, height: 16,
+            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 8),
         Text(title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-        const Spacer(),
-        TextButton(
-          onPressed: () => _showComingSoon(),
-          child: const Text('View All'),
-        ),
       ],
     );
   }
@@ -308,6 +307,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
@@ -323,7 +323,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 Text(dateStr, style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
                 if (isOutstanding && due > 0) ...[
                   const SizedBox(height: 4),
-                  Text('Due: ₹ ${currency.format(due)}', style: TextStyle(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w600)),
+                  Text('Due: ₹ ${currency.format(due)}',
+                      style: TextStyle(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w600)),
                 ],
               ],
             ),
@@ -331,9 +332,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('₹ ${currency.format(total)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text('₹ ${currency.format(total)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 4),
-              Text(status, style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(status,
+                    style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w700)),
+              ),
             ],
           ),
         ],
@@ -347,18 +357,19 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     final dateStr = date != null ? DateFormat('dd MMM yyyy').format(date) : 'N/A';
     final method = payment['paymentMethod'] ?? 'CASH';
 
+    final methodLabel = method.replaceAll('_', ' ');
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 40, height: 40,
             decoration: BoxDecoration(
               color: const Color(0xFFE8F5E9),
               borderRadius: BorderRadius.circular(10),
@@ -370,13 +381,24 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Received Payment', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text('$dateStr • $method', style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+                const Text('Payment Received', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 3),
+                Text(dateStr, style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(methodLabel,
+                      style: const TextStyle(fontSize: 10, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600)),
+                ),
               ],
             ),
           ),
-          Text('₹ ${currency.format(amount)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2E7D32))),
+          Text('+ ₹ ${currency.format(amount)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2E7D32))),
         ],
       ),
     );
@@ -444,7 +466,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => _showComingSoon(),
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon'))),
               icon: const Icon(Icons.share, size: 18),
               label: const Text('Share Ledger'),
               style: OutlinedButton.styleFrom(
@@ -528,13 +550,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer deleted')));
   }
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon')));
-  }
-
   String get _orderCountText {
-    if (!_salesAsync.hasValue) return '...';
-    final data = _salesAsync.valueOrNull;
+    final salesAsync = ref.read(customerSalesProvider(widget.customerId));
+    if (!salesAsync.hasValue) return '...';
+    final data = salesAsync.valueOrNull;
     if (data == null) return '0';
     return '${((data['data'] as List<dynamic>?) ?? []).length}';
   }

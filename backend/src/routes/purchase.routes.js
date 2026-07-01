@@ -1,6 +1,7 @@
 const { purchaseSchema } = require('../utils/validators');
 const { handleError, NotFoundError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function purchaseRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -50,6 +51,12 @@ async function purchaseRoutes(fastify) {
             },
           });
 
+          // Update product cost price to latest purchase price
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { costPrice: item.purchasePrice },
+          });
+
           // Auto create batch
           const batchCount = await tx.batch.count({ where: { companyId } });
           const batchNumber = `B${String(batchCount + 1).padStart(6, '0')}`;
@@ -81,7 +88,7 @@ async function purchaseRoutes(fastify) {
         });
       });
 
-      return reply.status(201).send(result);
+      return reply.status(201).send(convertPrismaToJson(result));
     } catch (error) {
       handleError(reply, error);
     }
@@ -119,7 +126,7 @@ async function purchaseRoutes(fastify) {
         fastify.prisma.purchase.count({ where }),
       ]);
 
-      return createPaginatedResponse(purchases, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(purchases), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -128,7 +135,7 @@ async function purchaseRoutes(fastify) {
   // Get Purchase by ID
   fastify.get('/:id', async (request, reply) => {
     try {
-      const purchase = await fastify.prisma.purchase.findFirst({
+      const rawPurchase = await fastify.prisma.purchase.findFirst({
         where: { id: request.params.id, companyId: request.user.companyId },
         include: {
           vendor: true,
@@ -139,8 +146,10 @@ async function purchaseRoutes(fastify) {
           },
         },
       });
-      if (!purchase) throw new NotFoundError('Purchase');
-      return purchase;
+      if (!rawPurchase) throw new NotFoundError('Purchase');
+
+      // Convert Decimal fields to numbers for JSON serialization
+      return convertPrismaToJson(rawPurchase);
     } catch (error) {
       handleError(reply, error);
     }
@@ -175,7 +184,7 @@ async function purchaseRoutes(fastify) {
         },
       });
 
-      return updated;
+      return convertPrismaToJson(updated);
     } catch (error) {
       handleError(reply, error);
     }
@@ -192,7 +201,7 @@ async function purchaseRoutes(fastify) {
         include: { vendor: { select: { id: true, name: true } } },
         take: 10,
       });
-      return purchases;
+      return convertPrismaToJson(purchases);
     } catch (error) {
       handleError(reply, error);
     }

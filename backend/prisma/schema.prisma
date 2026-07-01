@@ -53,11 +53,12 @@ model Company {
   vendors       Vendor[]
   products      Product[]
   categories    Category[]
-  purchases     Purchase[]
-  batches       Batch[]
-  customers     Customer[]
-  sales         Sale[]
-  salesReturns  SaleReturn[]
+  purchases        Purchase[]
+  batches          Batch[]
+  customers        Customer[]
+  sales            Sale[]
+  salesReturns     SaleReturn[]
+  purchaseReturns  PurchaseReturn[]
   customerPayments CustomerPayment[]
   vendorPayments   VendorPayment[]
   stockAdjustments StockAdjustment[]
@@ -158,10 +159,11 @@ model Vendor {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  purchases  Purchase[]
-  batches    Batch[]
-  payments   VendorPayment[]
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchases       Purchase[]
+  batches         Batch[]
+  payments        VendorPayment[]
+  purchaseReturns PurchaseReturn[]
 
   @@index([companyId])
   @@index([companyId, name])
@@ -191,10 +193,11 @@ model Product {
   company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   category       Category?       @relation(fields: [categoryId], references: [id])
   batches        Batch[]
-  purchaseItems  PurchaseItem[]
-  saleItems      SaleItem[]
-  returnItems    SaleReturnItem[]
-  adjustments    StockAdjustment[]
+  purchaseItems      PurchaseItem[]
+  saleItems          SaleItem[]
+  returnItems        SaleReturnItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  adjustments        StockAdjustment[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -219,11 +222,12 @@ model Purchase {
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  vendor         Vendor         @relation(fields: [vendorId], references: [id])
-  items          PurchaseItem[]
-  batches        Batch[]
-  vendorPayments VendorPayment[]
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vendor          Vendor          @relation(fields: [vendorId], references: [id])
+  items           PurchaseItem[]
+  batches         Batch[]
+  vendorPayments  VendorPayment[]
+  purchaseReturns PurchaseReturn[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId])
@@ -244,8 +248,9 @@ model PurchaseItem {
   totalAmount   Decimal  @map("total_amount") @db.Decimal(12, 2)
   createdAt     DateTime @default(now()) @map("created_at")
 
-  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id])
+  purchase          Purchase          @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product           Product           @relation(fields: [productId], references: [id])
+  purchaseReturnItems PurchaseReturnItem[]
 
   @@index([purchaseId])
   @@index([productId])
@@ -410,6 +415,51 @@ model SaleReturnItem {
   @@map("sale_return_items")
 }
 
+model PurchaseReturn {
+  id              String       @id @default(cuid())
+  companyId       String       @map("company_id")
+  purchaseId      String       @map("purchase_id")
+  vendorId        String?      @map("vendor_id")
+  returnNumber    String       @map("return_number")
+  returnDate      DateTime     @map("return_date")
+  totalAmount     Decimal      @map("total_amount") @db.Decimal(12, 2)
+  refundAmount    Decimal      @default(0) @map("refund_amount") @db.Decimal(12, 2)
+  reason          String?
+  status          ReturnStatus @default(PENDING)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchase Purchase          @relation(fields: [purchaseId], references: [id])
+  vendor   Vendor?           @relation(fields: [vendorId], references: [id])
+  items    PurchaseReturnItem[]
+
+  @@unique([companyId, returnNumber])
+  @@index([companyId])
+  @@index([companyId, purchaseId])
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnItem {
+  id            String  @id @default(cuid())
+  returnId      String  @map("return_id")
+  purchaseItemId String @map("purchase_item_id")
+  productId     String  @map("product_id")
+  quantity      Int
+  price         Decimal @db.Decimal(10, 2)
+  totalAmount   Decimal @map("total_amount") @db.Decimal(12, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  purchaseReturn PurchaseReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  purchaseItem   PurchaseItem   @relation(fields: [purchaseItemId], references: [id])
+  product        Product        @relation(fields: [productId], references: [id])
+
+  @@index([returnId])
+  @@index([productId])
+  @@index([purchaseItemId])
+  @@map("purchase_return_items")
+}
+
 model CustomerPayment {
   id            String        @id @default(cuid())
   companyId     String        @map("company_id")
@@ -472,6 +522,8 @@ model StockAdjustment {
   adjustmentType AdjustmentType @map("adjustment_type")
   quantity       Int
   reason         String?
+  reference      String?        @map("reference")
+  notes          String?        @map("notes")
   createdAt      DateTime       @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -552,4 +604,5 @@ enum ReturnStatus {
 enum AdjustmentType {
   INCREASE
   DECREASE
+  SET
 }

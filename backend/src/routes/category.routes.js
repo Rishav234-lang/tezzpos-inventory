@@ -3,6 +3,7 @@ const fs = require('fs');
 const { pipeline } = require('stream/promises');
 const { categorySchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function categoryRoutes(fastify, options) {
   fastify.addHook('onRequest', fastify.authenticate);
@@ -29,7 +30,7 @@ async function categoryRoutes(fastify, options) {
         },
       });
 
-      return categories.map((c) => ({
+      return convertPrismaToJson(categories.map((c) => ({
         id: c.id,
         name: c.name,
         description: c.description,
@@ -38,7 +39,7 @@ async function categoryRoutes(fastify, options) {
         itemCount: c._count.products,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
-      }));
+      })));
     } catch (error) {
       console.error('GET /api/categories error:', error);
       handleError(reply, error);
@@ -65,7 +66,10 @@ async function categoryRoutes(fastify, options) {
         },
       });
       if (!category) throw new NotFoundError('Category');
-      return category;
+      return convertPrismaToJson({
+        ...category,
+        itemCount: category.products.length,
+      });
     } catch (error) {
       handleError(reply, error);
     }
@@ -84,7 +88,7 @@ async function categoryRoutes(fastify, options) {
       const category = await fastify.prisma.category.create({
         data: { ...data, companyId: request.user.companyId },
       });
-      return reply.status(201).send(category);
+      return reply.status(201).send(convertPrismaToJson(category));
     } catch (error) {
       handleError(reply, error);
     }
@@ -109,7 +113,7 @@ async function categoryRoutes(fastify, options) {
         where: { id: request.params.id },
         data,
       });
-      return category;
+      return convertPrismaToJson(category);
     } catch (error) {
       handleError(reply, error);
     }

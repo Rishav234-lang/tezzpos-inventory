@@ -17,6 +17,8 @@ class ProductModel extends Product {
     super.sellingPrice,
     super.minStockLevel,
     super.totalStock,
+    super.stockValue,
+    super.stockValueMrp,
     super.status,
     required super.createdAt,
     required super.updatedAt,
@@ -43,6 +45,8 @@ class ProductModel extends Product {
       sellingPrice: _toDouble(json['sellingPrice']) ?? 0,
       minStockLevel: _toInt(json['minStockLevel']) ?? 10,
       totalStock: _toInt(json['totalStock']) ?? 0,
+      stockValue: _toDouble(json['stockValue']) ?? 0,
+      stockValueMrp: _toDouble(json['stockValueMrp']) ?? 0,
       status: json['status'] ?? 'ACTIVE',
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])

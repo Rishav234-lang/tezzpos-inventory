@@ -123,9 +123,21 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
   Failure _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
     final responseData = e.response?.data;
-    final message = responseData is Map<String, dynamic>
-        ? (responseData['error'] ?? responseData['message'] ?? e.message ?? 'Something went wrong')
-        : (e.message ?? 'Something went wrong');
+    String message = 'Something went wrong';
+    if (responseData is Map<String, dynamic>) {
+      final errorValue = responseData['error'] ?? responseData['message'];
+      if (errorValue is String) {
+        message = errorValue;
+      } else if (errorValue != null) {
+        message = errorValue.toString();
+      } else if (e.message != null) {
+        message = e.message!;
+      }
+    } else if (responseData is String) {
+      message = responseData;
+    } else if (e.message != null) {
+      message = e.message!;
+    }
     switch (statusCode) {
       case 400:
         return ValidationFailure(message: message);

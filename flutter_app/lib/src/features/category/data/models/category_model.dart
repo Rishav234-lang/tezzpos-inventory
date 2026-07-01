@@ -8,11 +8,16 @@ class CategoryModel extends Category {
     super.imageUrl,
     super.status,
     super.itemCount,
+    super.products,
     required super.createdAt,
     required super.updatedAt,
   });
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
+    final products = (json['products'] as List<dynamic>?)
+        ?.map((e) => e as Map<String, dynamic>)
+        .toList() ??
+        const <Map<String, dynamic>>[];
     return CategoryModel(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -20,6 +25,7 @@ class CategoryModel extends Category {
       imageUrl: json['imageUrl'],
       status: json['status'] ?? 'ACTIVE',
       itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
+      products: products,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),

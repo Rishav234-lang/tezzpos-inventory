@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../config/providers.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../product/presentation/providers/product_providers.dart';
 import '../providers/purchase_providers.dart';
 
 class PurchaseReturnScreen extends ConsumerStatefulWidget {
@@ -69,17 +72,33 @@ class _PurchaseReturnScreenState extends ConsumerState<PurchaseReturnScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // TODO: Implement actual return API call when backend supports it
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final dio = ref.read(dioProvider).dio;
+      await dio.post(ApiConstants.purchaseReturns, data: {
+        'purchaseId': purchase.id,
+        'returnDate': DateTime.now().toIso8601String(),
+        'reason': _selectedReason,
+        'refundAmount': 0,
+        'items': returnItems.map((item) => {
+          'purchaseItemId': item['purchaseItemId'],
+          'productId': item['productId'],
+          'quantity': item['quantity'],
+          'price': purchase.items.firstWhere((pi) => pi.id == item['purchaseItemId']).purchasePrice,
+        }).toList(),
+      });
 
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Purchase return created successfully')),
-    );
-    context.pop();
-
-    setState(() => _isSubmitting = false);
+      if (!mounted) return;
+      ref.invalidate(purchaseDetailProvider(purchase.id));
+      ref.invalidate(inventoryStatsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchase return created successfully')),
+      );
+      context.pop();
+    } catch (e) {
+      _showError('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override

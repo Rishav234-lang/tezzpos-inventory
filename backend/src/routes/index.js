@@ -8,6 +8,7 @@ const purchaseRoutes = require('./purchase.routes');
 const customerRoutes = require('./customer.routes');
 const saleRoutes = require('./sale.routes');
 const saleReturnRoutes = require('./sale-return.routes');
+const purchaseReturnRoutes = require('./purchase-return.routes');
 const paymentRoutes = require('./payment.routes');
 const inventoryRoutes = require('./inventory.routes');
 const reportRoutes = require('./report.routes');
@@ -28,6 +29,7 @@ const registerRoutes = async (app) => {
   app.register(customerRoutes, { prefix: '/api/customers' });
   app.register(saleRoutes, { prefix: '/api/sales' });
   app.register(saleReturnRoutes, { prefix: '/api/sale-returns' });
+  app.register(purchaseReturnRoutes, { prefix: '/api/purchase-returns' });
   app.register(paymentRoutes, { prefix: '/api/payments' });
   app.register(inventoryRoutes, { prefix: '/api/inventory' });
   app.register(reportRoutes, { prefix: '/api/reports' });

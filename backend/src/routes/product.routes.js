@@ -4,6 +4,7 @@ const { pipeline } = require('stream/promises');
 const { productSchema, categorySchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function productRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -178,12 +179,17 @@ async function productRoutes(fastify) {
 
         const enriched = allProducts.map((p) => {
           const totalStock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
-          const latestPurchasePrice = p.batches.length > 0 ? Number(p.batches[0].purchasePrice) : 0;
+          const stockValue = p.batches.reduce((sum, b) => sum + b.availableQuantity * Number(b.purchasePrice), 0);
+          const stockValueMrp = p.batches.reduce((sum, b) => sum + b.availableQuantity * Number(b.mrp || b.purchasePrice), 0);
           const firstBatch = p.batches[0];
+          const latestActiveBatch = p.batches.find((b) => b.availableQuantity > 0 && Number(b.purchasePrice) > 0);
+          const latestPurchasePrice = latestActiveBatch ? Number(latestActiveBatch.purchasePrice) : Number(p.batches[0]?.purchasePrice || 0);
           return {
             ...p,
             totalStock,
-            purchasePrice: latestPurchasePrice,
+            stockValue,
+            stockValueMrp,
+            costPrice: latestPurchasePrice,
             firstBatchNumber: firstBatch?.batchNumber || null,
             firstExpiryDate: firstBatch?.expiryDate || null,
             firstMrp: firstBatch?.mrp || null,
@@ -220,12 +226,17 @@ async function productRoutes(fastify) {
         finalTotal = total;
         finalProducts = products.map((p) => {
           const totalStock = p.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
-          const latestPurchasePrice = p.batches.length > 0 ? Number(p.batches[0].purchasePrice) : 0;
+          const stockValue = p.batches.reduce((sum, b) => sum + b.availableQuantity * Number(b.purchasePrice), 0);
+          const stockValueMrp = p.batches.reduce((sum, b) => sum + b.availableQuantity * Number(b.mrp || b.purchasePrice), 0);
           const firstBatch = p.batches[0];
+          const latestActiveBatch = p.batches.find((b) => b.availableQuantity > 0 && Number(b.purchasePrice) > 0);
+          const latestPurchasePrice = latestActiveBatch ? Number(latestActiveBatch.purchasePrice) : Number(p.batches[0]?.purchasePrice || 0);
           return {
             ...p,
             totalStock,
-            purchasePrice: latestPurchasePrice,
+            stockValue,
+            stockValueMrp,
+            costPrice: latestPurchasePrice,
             firstBatchNumber: firstBatch?.batchNumber || null,
             firstExpiryDate: firstBatch?.expiryDate || null,
             firstMrp: firstBatch?.mrp || null,
@@ -234,7 +245,7 @@ async function productRoutes(fastify) {
         });
       }
 
-      return createPaginatedResponse(finalProducts, finalTotal, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(finalProducts), finalTotal, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -254,7 +265,24 @@ async function productRoutes(fastify) {
         },
       });
       if (!product) throw new NotFoundError('Product');
-      return product;
+
+      const totalStock = product.batches.reduce((sum, b) => sum + b.availableQuantity, 0);
+      const stockValue = product.batches.reduce((sum, b) => sum + b.availableQuantity * Number(b.purchasePrice), 0);
+      const stockValueMrp = product.batches.reduce((sum, b) => sum + b.availableQuantity * Number(b.mrp || b.purchasePrice), 0);
+      const firstBatch = product.batches[0];
+      const latestActiveBatch = product.batches.find((b) => b.availableQuantity > 0 && Number(b.purchasePrice) > 0);
+      const latestPurchasePrice = latestActiveBatch ? Number(latestActiveBatch.purchasePrice) : Number(product.batches[0]?.purchasePrice || 0);
+
+      return convertPrismaToJson({
+        ...product,
+        totalStock,
+        stockValue,
+        stockValueMrp,
+        costPrice: latestPurchasePrice,
+        firstBatchNumber: firstBatch?.batchNumber || null,
+        firstExpiryDate: firstBatch?.expiryDate || null,
+        firstMrp: firstBatch?.mrp || null,
+      });
     } catch (error) {
       handleError(reply, error);
     }

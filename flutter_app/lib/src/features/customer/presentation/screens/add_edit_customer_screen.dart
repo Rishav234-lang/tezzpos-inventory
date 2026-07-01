@@ -292,6 +292,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
       );
     } else {
       ref.invalidate(customersProvider(CustomerFilter()));
+      if (isEdit) ref.invalidate(customerDetailProvider(widget.customerId!));
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(isEdit ? 'Customer updated' : 'Customer created')),

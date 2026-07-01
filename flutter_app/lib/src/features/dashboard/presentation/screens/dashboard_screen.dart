@@ -379,7 +379,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               }),
               _NavItem(icon: Icons.receipt_long_outlined, label: 'Sales', index: 2, selectedIndex: _selectedNavIndex, onTap: (i) {
                 setState(() => _selectedNavIndex = i);
-                context.push(AppRoutes.sales);
+                context.push(AppRoutes.salesHistory);
               }),
               _NavItem(icon: Icons.shopping_cart_outlined, label: 'Purchases', index: 3, selectedIndex: _selectedNavIndex, onTap: (i) {
                 setState(() => _selectedNavIndex = i);
@@ -434,7 +434,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             _DrawerAction(icon: Icons.inventory_2, label: 'Inventory', color: const Color(0xFF6A1B9A), onTap: () => context.push(AppRoutes.inventory)),
             _DrawerAction(icon: Icons.people, label: 'Customers', color: const Color(0xFF00838F), onTap: () => context.push(AppRoutes.customers)),
             _DrawerAction(icon: Icons.local_shipping, label: 'Vendors', color: AppColors.info, onTap: () => context.push(AppRoutes.vendors)),
-            _DrawerAction(icon: Icons.receipt_long, label: 'Sales', color: const Color(0xFF1565C0), onTap: () => context.push(AppRoutes.sales)),
+            _DrawerAction(icon: Icons.receipt_long, label: 'Sales', color: const Color(0xFF1565C0), onTap: () => context.push(AppRoutes.salesHistory)),
             _DrawerAction(icon: Icons.shopping_cart_outlined, label: 'Purchases', color: AppColors.secondary, onTap: () => context.push(AppRoutes.purchases)),
             const Divider(),
             _DrawerAction(icon: Icons.add_shopping_cart, label: 'Add Sale', color: AppColors.primary, onTap: () => context.push(AppRoutes.sales)),

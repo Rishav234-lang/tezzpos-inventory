@@ -7,6 +7,7 @@ class Category extends Equatable {
   final String? imageUrl;
   final String status;
   final int itemCount;
+  final List<Map<String, dynamic>> products;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -17,6 +18,7 @@ class Category extends Equatable {
     this.imageUrl,
     this.status = 'ACTIVE',
     this.itemCount = 0,
+    this.products = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,5 +26,5 @@ class Category extends Equatable {
   bool get isActive => status == 'ACTIVE';
 
   @override
-  List<Object?> get props => [id, name, description, imageUrl, status, itemCount];
+  List<Object?> get props => [id, name, description, imageUrl, status, itemCount, products];
 }

@@ -121,13 +121,13 @@ class SaleDetailScreen extends ConsumerWidget {
   Widget _buildStatsRow(BuildContext context, sale, NumberFormat currency) {
     return Row(
       children: [
-        _buildStatCard('Total Purchases', '₹ ${currency.format(sale.totalAmount)}', const Color(0xFF1565C0)),
+        _buildStatCard('Total Amount', '₹ ${currency.format(sale.totalAmount)}', const Color(0xFF1565C0)),
         const SizedBox(width: 10),
         _buildStatCard('Total Paid', '₹ ${currency.format(sale.paidAmount)}', const Color(0xFF2E7D32)),
         const SizedBox(width: 10),
         _buildStatCard('Outstanding', '₹ ${currency.format(sale.balanceAmount)}', AppColors.error),
         const SizedBox(width: 10),
-        _buildStatCard('Total Orders', '${sale.items.length}', const Color(0xFF6A1B9A)),
+        _buildStatCard('Total Items', '${sale.totalQuantity}', const Color(0xFF6A1B9A)),
       ],
     );
   }
@@ -162,7 +162,7 @@ class SaleDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Recent Invoices', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text('Items', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           ...sale.items.map((item) {
             return Container(
@@ -192,7 +192,8 @@ class SaleDetailScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text('₹ ${currency.format(item.totalAmount)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text('Paid', style: TextStyle(fontSize: 11, color: _statusColor(sale.status))),
+                      if (item.taxAmount > 0)
+                        Text('Tax: ₹ ${currency.format(item.taxAmount)}', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
                     ],
                   ),
                 ],

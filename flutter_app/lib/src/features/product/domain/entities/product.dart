@@ -16,6 +16,8 @@ class Product extends Equatable {
   final double sellingPrice;
   final int minStockLevel;
   final int totalStock;
+  final double stockValue;
+  final double stockValueMrp;
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -39,6 +41,8 @@ class Product extends Equatable {
     this.sellingPrice = 0,
     this.minStockLevel = 10,
     this.totalStock = 0,
+    this.stockValue = 0,
+    this.stockValueMrp = 0,
     this.status = 'ACTIVE',
     required this.createdAt,
     required this.updatedAt,
@@ -68,6 +72,8 @@ class Product extends Equatable {
         sellingPrice,
         minStockLevel,
         totalStock,
+        stockValue,
+        stockValueMrp,
         status,
         firstBatchNumber,
         firstExpiryDate,

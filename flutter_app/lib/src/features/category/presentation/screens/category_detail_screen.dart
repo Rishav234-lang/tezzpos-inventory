@@ -162,20 +162,10 @@ class CategoryDetailScreen extends ConsumerWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Text(
-                        'View All',
-                        style: context.textTheme.labelMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (category.itemCount == 0)
+                if (category.products.isEmpty)
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -183,7 +173,9 @@ class CategoryDetailScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Center(child: Text('No items in this category')),
-                  ),
+                  )
+                else
+                  ...category.products.map((product) => _buildProductTile(context, product)),
                 const SizedBox(height: 80),
               ],
             ),
@@ -340,6 +332,65 @@ class CategoryDetailScreen extends ConsumerWidget {
     if (lower.contains('household')) return const Color(0xFF00838F);
     if (lower.contains('baby')) return const Color(0xFFEF6C00);
     return AppColors.primary;
+  }
+
+  Widget _buildProductTile(BuildContext context, Map<String, dynamic> product) {
+    final productId = product['id'] as String?;
+    final productName = product['name'] ?? 'Unknown';
+    final sku = product['sku'] as String?;
+    final barcode = product['barcode'] as String?;
+    final sellingPrice = product['sellingPrice'];
+    final price = (sellingPrice is num ? sellingPrice.toDouble() : double.tryParse(sellingPrice.toString()) ?? 0.0);
+    final currency = NumberFormat('#,##,##0.00');
+
+    return InkWell(
+      onTap: productId != null ? () => context.push('${AppRoutes.productDetail}/$productId') : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productName,
+                    style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sku != null && sku.isNotEmpty ? 'SKU: $sku' : (barcode != null && barcode.isNotEmpty ? 'Barcode: $barcode' : ''),
+                    style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '₹ ${currency.format(price)}',
+              style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
   }
 }
 

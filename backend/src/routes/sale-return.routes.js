@@ -1,6 +1,7 @@
 const { saleReturnSchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function saleReturnRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -58,16 +59,35 @@ async function saleReturnRoutes(fastify) {
           },
         });
 
-        // Restore stock to batches (restore to most recent batch with that product)
+        // Restore stock to the original batches from the sale (FIFO reverse)
         for (const item of data.items) {
-          const batch = await tx.batch.findFirst({
+          const saleItem = sale.items.find((si) => si.productId === item.productId);
+          const batchId = saleItem?.batchId;
+
+          if (batchId) {
+            const batch = await tx.batch.findFirst({
+              where: { id: batchId, companyId },
+            });
+            if (batch) {
+              await tx.batch.update({
+                where: { id: batch.id },
+                data: {
+                  availableQuantity: { increment: item.quantity },
+                  status: 'ACTIVE',
+                },
+              });
+              continue;
+            }
+          }
+
+          // Fallback: restore to most recent batch with that product
+          const fallbackBatch = await tx.batch.findFirst({
             where: { companyId, productId: item.productId },
             orderBy: { purchaseDate: 'desc' },
           });
-
-          if (batch) {
+          if (fallbackBatch) {
             await tx.batch.update({
-              where: { id: batch.id },
+              where: { id: fallbackBatch.id },
               data: {
                 availableQuantity: { increment: item.quantity },
                 status: 'ACTIVE',
@@ -76,7 +96,7 @@ async function saleReturnRoutes(fastify) {
           }
         }
 
-        return tx.saleReturn.findUnique({
+        const result = await tx.saleReturn.findUnique({
           where: { id: saleReturn.id },
           include: {
             sale: { select: { invoiceNumber: true } },
@@ -84,6 +104,7 @@ async function saleReturnRoutes(fastify) {
             items: { include: { product: { select: { id: true, name: true } } } },
           },
         });
+        return convertPrismaToJson(result);
       });
 
       return reply.status(201).send(result);
@@ -114,7 +135,7 @@ async function saleReturnRoutes(fastify) {
         fastify.prisma.saleReturn.count({ where }),
       ]);
 
-      return createPaginatedResponse(returns, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(returns), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -132,7 +153,7 @@ async function saleReturnRoutes(fastify) {
         },
       });
       if (!saleReturn) throw new NotFoundError('Sale Return');
-      return saleReturn;
+      return convertPrismaToJson(saleReturn);
     } catch (error) {
       handleError(reply, error);
     }

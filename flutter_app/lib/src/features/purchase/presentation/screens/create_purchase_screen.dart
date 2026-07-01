@@ -444,44 +444,47 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
   }
 
   Widget _buildWidePurchaseInfo() {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildLabel('Vendor', required: true),
-              const SizedBox(height: 6),
-              _buildVendorPickerField(),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildLabel('Invoice No.', required: true),
-              const SizedBox(height: 6),
-              _buildTextField(
-                controller: _invoiceController,
-                hint: 'INV-00125',
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Vendor', required: true),
+                  const SizedBox(height: 6),
+                  _buildVendorPickerField(),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Invoice No.', required: true),
+                  const SizedBox(height: 6),
+                  _buildTextField(
+                    controller: _invoiceController,
+                    hint: 'INV-00125',
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildLabel('Purchase Date', required: true),
-              const SizedBox(height: 6),
-              _buildDatePickerField(),
-            ],
-          ),
+        const SizedBox(height: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildLabel('Purchase Date', required: true),
+            const SizedBox(height: 6),
+            _buildDatePickerField(),
+          ],
         ),
       ],
     );

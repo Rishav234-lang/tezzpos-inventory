@@ -39,7 +39,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     final currency = NumberFormat('#,##,##0.00');
     final dateFormat = DateFormat('dd MMM yyyy');
 
-    final stockValue = product.totalStock * (product.firstMrp ?? product.sellingPrice);
+    final stockValue = product.stockValue;
+    final stockValueMrp = product.stockValueMrp;
 
     String expiryAlert;
     Color expiryColor;
@@ -104,7 +105,7 @@ class InventoryDetailScreen extends ConsumerWidget {
                 // Stock Overview
                 _buildSectionTitle(context, 'Stock Overview'),
                 const SizedBox(height: 12),
-                _buildStockOverview(context, product, currency, dateFormat, stockValue, expiryAlert, expiryColor),
+                _buildStockOverview(context, product, currency, dateFormat, stockValue, stockValueMrp, expiryAlert, expiryColor),
                 const SizedBox(height: 20),
 
                 // Actions
@@ -203,7 +204,6 @@ class InventoryDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildQuickMetrics(BuildContext context, Product product, NumberFormat currency) {
-    final stockValue = product.totalStock * product.costPrice;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
@@ -225,7 +225,7 @@ class InventoryDetailScreen extends ConsumerWidget {
             icon: Icons.account_balance_wallet_outlined,
             iconColor: const Color(0xFF388E3C),
             iconBg: const Color(0xFFE8F5E9),
-            value: '₹ ${currency.format(stockValue)}',
+            value: '₹ ${currency.format(product.stockValue)}',
             label: 'Stock Value',
           ),
           _divider(),
@@ -256,7 +256,7 @@ class InventoryDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildStockOverview(BuildContext context, Product product, NumberFormat currency,
-      DateFormat dateFormat, double stockValue, String expiryAlert, Color expiryColor) {
+      DateFormat dateFormat, double stockValue, double stockValueMrp, String expiryAlert, Color expiryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -270,7 +270,9 @@ class InventoryDetailScreen extends ConsumerWidget {
           const Divider(height: 20),
           _OverviewRow(label: 'In Stock', value: '${product.totalStock} pcs', valueColor: const Color(0xFF388E3C)),
           const Divider(height: 20),
-          _OverviewRow(label: 'Stock Value (MRP)', value: '₹ ${currency.format(stockValue)}'),
+          _OverviewRow(label: 'Stock Value (Cost)', value: '₹ ${currency.format(stockValue)}'),
+          const Divider(height: 20),
+          _OverviewRow(label: 'Stock Value (MRP)', value: '₹ ${currency.format(stockValueMrp)}'),
           if (product.firstExpiryDate != null) ...[
             const Divider(height: 20),
             _OverviewRow(

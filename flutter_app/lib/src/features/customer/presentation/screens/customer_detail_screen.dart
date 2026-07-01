@@ -54,6 +54,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
   Widget _buildContent(BuildContext context, Customer customer) {
     final currency = NumberFormat('#,##,##0.00');
+    final dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -61,6 +62,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context, customer),
+          const SizedBox(height: 16),
+          _buildInfoCard(context, customer, dateFormat),
           const SizedBox(height: 20),
           _buildStatsRow(context, customer, currency),
           const SizedBox(height: 20),
@@ -142,6 +145,52 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     );
   }
 
+  Widget _buildInfoCard(BuildContext context, Customer customer, DateFormat dateFormat) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Customer Information', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const Divider(height: 24),
+          _buildInfoRow('Email', customer.email ?? 'Not provided'),
+          if (customer.gstNumber != null && customer.gstNumber!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildInfoRow('GST Number', customer.gstNumber!),
+          ],
+          if (customer.address != null && customer.address!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildInfoRow('Address', customer.address!),
+          ],
+          const SizedBox(height: 12),
+          _buildInfoRow('Created On', dateFormat.format(customer.createdAt)),
+          const SizedBox(height: 12),
+          _buildInfoRow('Last Updated', dateFormat.format(customer.updatedAt)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(label, style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant)),
+        ),
+        Expanded(
+          child: Text(value, style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStatsRow(BuildContext context, Customer customer, NumberFormat currency) {
     return Row(
       children: [
@@ -151,7 +200,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         const SizedBox(width: 10),
         _buildStatCard('Outstanding', '₹ ${currency.format(customer.outstandingBalance)}', AppColors.error),
         const SizedBox(width: 10),
-        _buildStatCard('Total Orders', '$_orderCount', const Color(0xFF6A1B9A)),
+        _buildStatCard('Total Orders', _orderCountText, const Color(0xFF6A1B9A)),
       ],
     );
   }
@@ -483,9 +532,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon')));
   }
 
-  int get _orderCount {
-    return _salesAsync.valueOrNull != null
-        ? ((_salesAsync.valueOrNull!['data'] as List<dynamic>?) ?? []).length
-        : 0;
+  String get _orderCountText {
+    if (!_salesAsync.hasValue) return '...';
+    final data = _salesAsync.valueOrNull;
+    if (data == null) return '0';
+    return '${((data['data'] as List<dynamic>?) ?? []).length}';
   }
 }

@@ -391,9 +391,15 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen>
       final dio = ref.read(dioProvider).dio;
       await dio.post(ApiConstants.inventoryAdjust, data: {
         'productId': product.id,
-        'adjustmentType': _adjustmentType == 'ADD' ? 'INCREASE' : 'DECREASE',
-        'quantity': _qty,
+        'adjustmentType': _adjustmentType == 'ADD'
+            ? 'INCREASE'
+            : _adjustmentType == 'REDUCE'
+                ? 'DECREASE'
+                : 'SET',
+        'quantity': _adjustmentType == 'SET' ? _qty : _qty,
         'reason': _selectedReason,
+        'reference': _referenceController.text.trim().isNotEmpty ? _referenceController.text.trim() : null,
+        'notes': _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
       });
 
       if (!mounted) return;

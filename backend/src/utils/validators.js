@@ -100,6 +100,22 @@ const saleReturnSchema = z.object({
   items: z.array(saleReturnItemSchema).min(1),
 });
 
+// Purchase Return validators
+const purchaseReturnItemSchema = z.object({
+  purchaseItemId: z.string(),
+  productId: z.string(),
+  quantity: z.number().int().positive(),
+  price: z.number().positive(),
+});
+
+const purchaseReturnSchema = z.object({
+  purchaseId: z.string(),
+  returnDate: z.string(),
+  reason: z.string().optional().nullable(),
+  refundAmount: z.number().min(0).default(0),
+  items: z.array(purchaseReturnItemSchema).min(1),
+});
+
 // Payment validators
 const customerPaymentSchema = z.object({
   customerId: z.string(),
@@ -157,6 +173,7 @@ module.exports = {
   customerSchema,
   saleSchema,
   saleReturnSchema,
+  purchaseReturnSchema,
   customerPaymentSchema,
   vendorPaymentSchema,
   planSchema,

@@ -15,6 +15,24 @@ final _batchDetailProvider = FutureProvider.family<Map<String, dynamic>, String>
   return response.data as Map<String, dynamic>;
 });
 
+int _toInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  if (value is num) return value.toInt();
+  return 0;
+}
+
+double _toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  if (value is num) return value.toDouble();
+  return 0.0;
+}
+
 class BatchDetailScreen extends ConsumerWidget {
   final String batchId;
 
@@ -46,11 +64,11 @@ class BatchDetailScreen extends ConsumerWidget {
 
     final batchNumber = batch['batchNumber'] ?? 'N/A';
     final status = batch['status'] ?? 'ACTIVE';
-    final purchasedQty = batch['purchasedQuantity'] as int? ?? 0;
-    final availableQty = batch['availableQuantity'] as int? ?? 0;
+    final purchasedQty = _toInt(batch['purchasedQuantity']);
+    final availableQty = _toInt(batch['availableQuantity']);
     final soldQty = purchasedQty - availableQty;
-    final purchasePrice = (batch['purchasePrice'] as num?)?.toDouble() ?? 0.0;
-    final mrp = (batch['mrp'] as num?)?.toDouble() ?? 0.0;
+    final purchasePrice = _toDouble(batch['purchasePrice']);
+    final mrp = _toDouble(batch['mrp']);
     final product = batch['product'] as Map<String, dynamic>?;
     final vendor = batch['vendor'] as Map<String, dynamic>?;
     final purchase = batch['purchase'] as Map<String, dynamic>?;
@@ -248,7 +266,7 @@ class BatchDetailScreen extends ConsumerWidget {
             Column(
               children: saleItems.map((item) {
                 final sale = (item as Map<String, dynamic>)['sale'] as Map<String, dynamic>?;
-                final quantity = (item['quantity'] as int?) ?? 0;
+                final quantity = _toInt(item['quantity']);
                 final createdAt = item['createdAt'] != null ? DateTime.tryParse(item['createdAt']) : null;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,

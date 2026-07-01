@@ -1,6 +1,7 @@
 const { customerSchema } = require('../utils/validators');
 const { handleError, NotFoundError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function customerRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -13,7 +14,7 @@ async function customerRoutes(fastify) {
       const customer = await fastify.prisma.customer.create({
         data: { ...data, companyId: request.user.companyId },
       });
-      return reply.status(201).send(customer);
+      return reply.status(201).send(convertPrismaToJson(customer));
     } catch (error) {
       handleError(reply, error);
     }
@@ -45,7 +46,51 @@ async function customerRoutes(fastify) {
         fastify.prisma.customer.count({ where }),
       ]);
 
-      return createPaginatedResponse(customers, total, page, limit);
+      const customerIds = customers.map((c) => c.id);
+      const [sales, payments] = await Promise.all([
+        fastify.prisma.sale.findMany({
+          where: { companyId, customerId: { in: customerIds } },
+          select: { customerId: true, totalAmount: true, paidAmount: true, invoiceDate: true },
+        }),
+        fastify.prisma.customerPayment.findMany({
+          where: { companyId, customerId: { in: customerIds } },
+          select: { customerId: true, amount: true },
+        }),
+      ]);
+
+      const salesByCustomer = {};
+      const paymentsByCustomer = {};
+      for (const s of sales) {
+        if (!salesByCustomer[s.customerId]) salesByCustomer[s.customerId] = [];
+        salesByCustomer[s.customerId].push(s);
+      }
+      for (const p of payments) {
+        if (!paymentsByCustomer[p.customerId]) paymentsByCustomer[p.customerId] = [];
+        paymentsByCustomer[p.customerId].push(p);
+      }
+
+      const enrichedCustomers = customers.map((c) => {
+        const customerSales = salesByCustomer[c.id] || [];
+        const customerPayments = paymentsByCustomer[c.id] || [];
+        const totalPurchaseAmount = customerSales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+        const salePaidAmount = customerSales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
+        const paymentAmount = customerPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const totalPaidAmount = salePaidAmount + paymentAmount;
+        const outstandingBalance = totalPurchaseAmount - totalPaidAmount;
+        const lastPurchaseDate = customerSales.length > 0
+          ? customerSales.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate))[0].invoiceDate
+          : null;
+
+        return {
+          ...c,
+          totalPurchaseAmount,
+          totalPaidAmount,
+          outstandingBalance,
+          lastPurchaseDate,
+        };
+      });
+
+      return createPaginatedResponse(convertPrismaToJson(enrichedCustomers), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -54,11 +99,39 @@ async function customerRoutes(fastify) {
   // Get Customer by ID
   fastify.get('/:id', async (request, reply) => {
     try {
+      const { companyId } = request.user;
       const customer = await fastify.prisma.customer.findFirst({
-        where: { id: request.params.id, companyId: request.user.companyId },
+        where: { id: request.params.id, companyId },
       });
       if (!customer) throw new NotFoundError('Customer');
-      return customer;
+
+      const [sales, payments] = await Promise.all([
+        fastify.prisma.sale.findMany({
+          where: { companyId, customerId: request.params.id },
+          select: { totalAmount: true, paidAmount: true, invoiceDate: true },
+        }),
+        fastify.prisma.customerPayment.findMany({
+          where: { companyId, customerId: request.params.id },
+          select: { amount: true },
+        }),
+      ]);
+
+      const totalPurchaseAmount = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+      const salePaidAmount = sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
+      const paymentAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalPaidAmount = salePaidAmount + paymentAmount;
+      const outstandingBalance = totalPurchaseAmount - totalPaidAmount;
+      const lastPurchaseDate = sales.length > 0
+        ? sales.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate))[0].invoiceDate
+        : null;
+
+      return convertPrismaToJson({
+        ...customer,
+        totalPurchaseAmount,
+        totalPaidAmount,
+        outstandingBalance,
+        lastPurchaseDate,
+      });
     } catch (error) {
       handleError(reply, error);
     }
@@ -77,7 +150,7 @@ async function customerRoutes(fastify) {
         where: { id: request.params.id },
         data,
       });
-      return customer;
+      return convertPrismaToJson(customer);
     } catch (error) {
       handleError(reply, error);
     }
@@ -117,7 +190,7 @@ async function customerRoutes(fastify) {
         fastify.prisma.sale.count({ where }),
       ]);
 
-      return createPaginatedResponse(sales, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(sales), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -142,10 +215,18 @@ async function customerRoutes(fastify) {
       ]);
 
       const totalSalesAmount = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-      const totalPaidAmount = sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
+      const salePaidAmount = sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
+      const paymentAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalPaidAmount = salePaidAmount + paymentAmount;
       const outstandingBalance = totalSalesAmount - totalPaidAmount;
 
-      return { sales, payments, totalSalesAmount, totalPaidAmount, outstandingBalance };
+      return convertPrismaToJson({
+        sales,
+        payments,
+        totalSalesAmount,
+        totalPaidAmount,
+        outstandingBalance,
+      });
     } catch (error) {
       handleError(reply, error);
     }

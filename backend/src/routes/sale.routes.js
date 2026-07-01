@@ -1,6 +1,7 @@
 const { saleSchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function saleRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -141,7 +142,7 @@ async function saleRoutes(fastify) {
         return sale;
       });
 
-      return reply.status(201).send(result);
+      return reply.status(201).send(convertPrismaToJson(result));
     } catch (error) {
       handleError(reply, error);
     }
@@ -177,7 +178,7 @@ async function saleRoutes(fastify) {
         fastify.prisma.sale.count({ where }),
       ]);
 
-      return createPaginatedResponse(sales, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(sales), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -212,7 +213,7 @@ async function saleRoutes(fastify) {
         },
       });
 
-      return updated;
+      return convertPrismaToJson(updated);
     } catch (error) {
       handleError(reply, error);
     }
@@ -221,7 +222,7 @@ async function saleRoutes(fastify) {
   // Get Sale by ID
   fastify.get('/:id', async (request, reply) => {
     try {
-      const sale = await fastify.prisma.sale.findFirst({
+      const rawSale = await fastify.prisma.sale.findFirst({
         where: { id: request.params.id, companyId: request.user.companyId },
         include: {
           customer: true,
@@ -233,8 +234,8 @@ async function saleRoutes(fastify) {
           },
         },
       });
-      if (!sale) throw new NotFoundError('Sale');
-      return sale;
+      if (!rawSale) throw new NotFoundError('Sale');
+      return convertPrismaToJson(rawSale);
     } catch (error) {
       handleError(reply, error);
     }
@@ -251,7 +252,7 @@ async function saleRoutes(fastify) {
         include: { customer: { select: { id: true, name: true } } },
         take: 10,
       });
-      return sales;
+      return convertPrismaToJson(sales);
     } catch (error) {
       handleError(reply, error);
     }

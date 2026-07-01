@@ -19,6 +19,24 @@ final _productBatchesProvider = FutureProvider.family<Map<String, dynamic>, Stri
   return response.data as Map<String, dynamic>;
 });
 
+int _toInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  if (value is num) return value.toInt();
+  return 0;
+}
+
+double _toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  if (value is num) return value.toDouble();
+  return 0.0;
+}
+
 class ProductBatchesScreen extends ConsumerWidget {
   final String productId;
 
@@ -101,11 +119,11 @@ class _BatchCard extends StatelessWidget {
     final batchId = batch['id'] as String?;
     final batchNumber = batch['batchNumber'] ?? 'N/A';
     final status = batch['status'] ?? 'ACTIVE';
-    final purchasedQty = batch['purchasedQuantity'] as int? ?? 0;
-    final availableQty = batch['availableQuantity'] as int? ?? 0;
+    final purchasedQty = _toInt(batch['purchasedQuantity']);
+    final availableQty = _toInt(batch['availableQuantity']);
     final soldQty = purchasedQty - availableQty;
-    final purchasePrice = (batch['purchasePrice'] as num?)?.toDouble() ?? 0.0;
-    final mrp = (batch['mrp'] as num?)?.toDouble() ?? 0.0;
+    final purchasePrice = _toDouble(batch['purchasePrice']);
+    final mrp = _toDouble(batch['mrp']);
     final productName = (batch['product'] as Map<String, dynamic>?)?['name'] ?? 'N/A';
     final productSku = (batch['product'] as Map<String, dynamic>?)?['sku'] ?? '';
     final vendorName = (batch['vendor'] as Map<String, dynamic>?)?['name'] ?? 'N/A';

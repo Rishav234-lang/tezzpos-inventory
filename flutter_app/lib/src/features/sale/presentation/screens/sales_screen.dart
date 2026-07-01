@@ -21,10 +21,16 @@ class SalesScreen extends ConsumerStatefulWidget {
 class _CartItem {
   final Product product;
   int quantity;
+  double customSellingPrice;
+  final TextEditingController priceController;
 
-  _CartItem({required this.product, this.quantity = 1});
+  _CartItem({required this.product, this.quantity = 1, double? customPrice})
+      : customSellingPrice = customPrice ?? product.sellingPrice,
+        priceController = TextEditingController(text: (customPrice ?? product.sellingPrice).toStringAsFixed(2));
 
-  double get taxableAmount => quantity * product.sellingPrice;
+  double get effectivePrice => customSellingPrice;
+
+  double get taxableAmount => quantity * effectivePrice;
 
   double get taxAmount {
     final taxable = taxableAmount;
@@ -33,6 +39,8 @@ class _CartItem {
   }
 
   double get totalAmount => taxableAmount + taxAmount;
+
+  void dispose() => priceController.dispose();
 }
 
 class _SalesScreenState extends ConsumerState<SalesScreen> {
@@ -41,13 +49,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   Customer? _selectedCustomer;
   final List<_CartItem> _cart = [];
   final double _saleDiscount = 0;
+  String _paymentMethod = 'CASH';
   bool _isSaving = false;
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   void _addToCart(Product product) {
     final existing = _cart.firstWhere(
@@ -63,8 +67,24 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     });
   }
 
+  void _updateItemPrice(_CartItem item, double newPrice) {
+    setState(() {
+      item.customSellingPrice = newPrice;
+    });
+  }
+
   void _removeFromCart(_CartItem item) {
+    item.dispose();
     setState(() => _cart.remove(item));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    for (final item in _cart) {
+      item.dispose();
+    }
+    super.dispose();
   }
 
   void _updateQuantity(_CartItem item, int delta) {
@@ -249,7 +269,36 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                     Text('SKU: ${item.product.sku ?? 'N/A'}', style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
                     const SizedBox(height: 4),
-                    Text('₹ ${item.product.sellingPrice.toStringAsFixed(2)} × ${item.quantity}', style: TextStyle(fontSize: 13, color: AppColors.onSurface)),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 80,
+                          height: 28,
+                          child: TextField(
+                            controller: item.priceController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            decoration: InputDecoration(
+                              prefixText: '₹ ',
+                              prefixStyle: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                              filled: true,
+                              fillColor: AppColors.surfaceVariant,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
+                            ),
+                            onSubmitted: (value) {
+                              final parsed = double.tryParse(value) ?? item.product.sellingPrice;
+                              final clamped = parsed < 0 ? item.product.sellingPrice : parsed;
+                              _updateItemPrice(item, clamped);
+                              item.priceController.text = clamped.toStringAsFixed(2);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('× ${item.quantity}', style: TextStyle(fontSize: 13, color: AppColors.onSurface)),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -315,6 +364,32 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
               Text('₹ ${currency.format(_totalDiscount)}'),
             ],
           ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Payment Method', style: TextStyle(color: AppColors.onSurfaceVariant)),
+              GestureDetector(
+                onTap: _showPaymentMethodPicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_paymentMethodLabel(_paymentMethod), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_drop_down, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -344,18 +419,72 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     );
   }
 
+  String _paymentMethodLabel(String method) {
+    switch (method) {
+      case 'UPI': return 'UPI';
+      case 'CARD': return 'Card';
+      case 'BANK_TRANSFER': return 'Bank Transfer';
+      case 'CASH':
+      default: return 'Cash';
+    }
+  }
+
+  void _showPaymentMethodPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        const methods = ['CASH', 'UPI', 'CARD', 'BANK_TRANSFER'];
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Select Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                ...methods.map((m) => ListTile(
+                  leading: Icon(_paymentMethodIcon(m), color: _paymentMethod == m ? AppColors.primary : AppColors.onSurfaceVariant),
+                  title: Text(_paymentMethodLabel(m)),
+                  trailing: _paymentMethod == m ? Icon(Icons.check_circle, color: AppColors.primary) : null,
+                  onTap: () {
+                    setState(() => _paymentMethod = m);
+                    context.pop();
+                  },
+                )),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _paymentMethodIcon(String method) {
+    switch (method) {
+      case 'UPI': return Icons.account_balance_wallet_outlined;
+      case 'CARD': return Icons.credit_card_outlined;
+      case 'BANK_TRANSFER': return Icons.account_balance_outlined;
+      case 'CASH':
+      default: return Icons.payments_outlined;
+    }
+  }
+
   Future<void> _proceedToPay() async {
     final items = _cart.map((item) => {
       'productId': item.product.id,
       'quantity': item.quantity,
-      'sellingPrice': item.product.sellingPrice,
+      'sellingPrice': item.effectivePrice,
       'discount': 0,
     }).toList();
 
     final data = {
       'customerId': _selectedCustomer?.id,
       'paidAmount': _grandTotal,
-      'paymentMethod': 'CASH',
+      'paymentMethod': _paymentMethod,
       'discount': _saleDiscount,
       'items': items,
     };

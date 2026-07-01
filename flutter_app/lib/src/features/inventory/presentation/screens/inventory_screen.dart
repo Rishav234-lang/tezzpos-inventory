@@ -151,6 +151,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   Widget _buildTitleRow(BuildContext context) {
     return Row(
       children: [
+        IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back),
+          color: AppColors.onSurface,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+        ),
+        const SizedBox(width: 8),
         Text('Inventory', style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
         const Spacer(),
         IconButton(
@@ -434,7 +442,7 @@ class _InventoryProductCard extends StatelessWidget {
     final dateFormat = DateFormat('dd MMM yyyy');
     final currency = NumberFormat('#,##,##0.00');
 
-    final stockValue = product.totalStock * product.costPrice;
+    final stockValue = product.stockValue;
 
     Color statusFg;
     Color statusBg;

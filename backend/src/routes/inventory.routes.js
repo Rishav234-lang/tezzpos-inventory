@@ -1,5 +1,6 @@
-const { handleError, NotFoundError } = require('../utils/errors');
+const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { convertPrismaToJson } = require('../utils/convertPrisma');
 
 async function inventoryRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -63,7 +64,7 @@ async function inventoryRoutes(fastify) {
         stockData = stockData.filter((s) => s.isLowStock);
       }
 
-      return createPaginatedResponse(stockData, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(stockData), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -104,7 +105,7 @@ async function inventoryRoutes(fastify) {
         fastify.prisma.batch.count({ where }),
       ]);
 
-      return createPaginatedResponse(batches, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(batches), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -131,12 +132,10 @@ async function inventoryRoutes(fastify) {
       if (!batch) throw new NotFoundError('Batch');
 
       const soldQuantity = batch.purchasedQuantity - batch.availableQuantity;
-      return {
+      return convertPrismaToJson({
         ...batch,
         soldQuantity,
-        purchasePrice: Number(batch.purchasePrice),
-        mrp: Number(batch.mrp),
-      };
+      });
     } catch (error) {
       handleError(reply, error);
     }
@@ -145,8 +144,15 @@ async function inventoryRoutes(fastify) {
   // Stock Adjustment
   fastify.post('/adjust', async (request, reply) => {
     try {
-      const { productId, adjustmentType, quantity, reason } = request.body;
+      const { productId, adjustmentType, quantity, reason, reference, notes } = request.body;
       const companyId = request.user.companyId;
+
+      if (!productId || !adjustmentType || typeof quantity !== 'number' || quantity < 0) {
+        throw new ValidationError('Invalid stock adjustment payload');
+      }
+      if (!['INCREASE', 'DECREASE', 'SET'].includes(adjustmentType)) {
+        throw new ValidationError('Invalid adjustment type. Must be INCREASE, DECREASE, or SET');
+      }
 
       const product = await fastify.prisma.product.findFirst({
         where: { id: productId, companyId },
@@ -154,13 +160,48 @@ async function inventoryRoutes(fastify) {
       if (!product) throw new NotFoundError('Product');
 
       await fastify.prisma.$transaction(async (tx) => {
+        // Compute current total stock across all active batches
+        const activeBatches = await tx.batch.findMany({
+          where: { companyId, productId, status: 'ACTIVE', availableQuantity: { gt: 0 } },
+          orderBy: { purchaseDate: 'asc' },
+        });
+        const currentStock = activeBatches.reduce((sum, b) => sum + b.availableQuantity, 0);
+
+        let actualQuantity = quantity;
+        let storedType = adjustmentType;
+        let adjustmentReason = reason;
+
+        if (adjustmentType === 'SET') {
+          const targetStock = quantity;
+          if (targetStock > currentStock) {
+            storedType = 'INCREASE';
+            actualQuantity = targetStock - currentStock;
+          } else if (targetStock < currentStock) {
+            storedType = 'DECREASE';
+            actualQuantity = currentStock - targetStock;
+          } else {
+            // No change needed; still record a SET adjustment with quantity 0
+            storedType = 'SET';
+            actualQuantity = 0;
+          }
+          if (!adjustmentReason) adjustmentReason = 'Stock Set';
+        }
+
         // Record adjustment
         await tx.stockAdjustment.create({
-          data: { companyId, productId, adjustmentType, quantity, reason },
+          data: {
+            companyId,
+            productId,
+            adjustmentType: storedType,
+            quantity: actualQuantity,
+            reason: adjustmentReason,
+            reference,
+            notes,
+          },
         });
 
-        if (adjustmentType === 'INCREASE') {
-          // Add to most recent active batch
+        if (adjustmentType === 'INCREASE' || (adjustmentType === 'SET' && storedType === 'INCREASE')) {
+          // Add to most recent active batch (or create a generic adjustment batch if none)
           const batch = await tx.batch.findFirst({
             where: { companyId, productId, status: 'ACTIVE' },
             orderBy: { purchaseDate: 'desc' },
@@ -168,25 +209,44 @@ async function inventoryRoutes(fastify) {
           if (batch) {
             await tx.batch.update({
               where: { id: batch.id },
-              data: { availableQuantity: { increment: quantity } },
+              data: {
+                availableQuantity: { increment: actualQuantity },
+                status: 'ACTIVE',
+              },
+            });
+          } else {
+            // Create a generic adjustment batch with no purchase/vendor reference
+            const batchCount = await tx.batch.count({ where: { companyId } });
+            await tx.batch.create({
+              data: {
+                companyId,
+                productId,
+                batchNumber: `ADJ${String(batchCount + 1).padStart(6, '0')}`,
+                purchaseDate: new Date(),
+                purchasePrice: 0,
+                mrp: product.sellingPrice || 0,
+                purchasedQuantity: actualQuantity,
+                availableQuantity: actualQuantity,
+                status: 'ACTIVE',
+              },
             });
           }
-        } else {
+        } else if (adjustmentType === 'DECREASE' || (adjustmentType === 'SET' && storedType === 'DECREASE')) {
           // Deduct from oldest batch (FIFO)
-          const batches = await tx.batch.findMany({
-            where: { companyId, productId, status: 'ACTIVE', availableQuantity: { gt: 0 } },
-            orderBy: { purchaseDate: 'asc' },
-          });
+          if (actualQuantity > currentStock) {
+            throw new ValidationError(`Insufficient stock. Available: ${currentStock}, Requested: ${actualQuantity}`);
+          }
 
-          let remaining = quantity;
-          for (const batch of batches) {
+          let remaining = actualQuantity;
+          for (const batch of activeBatches) {
             if (remaining <= 0) break;
             const deduct = Math.min(remaining, batch.availableQuantity);
+            const newAvailable = batch.availableQuantity - deduct;
             await tx.batch.update({
               where: { id: batch.id },
               data: {
-                availableQuantity: { decrement: deduct },
-                status: batch.availableQuantity - deduct === 0 ? 'DEPLETED' : 'ACTIVE',
+                availableQuantity: newAvailable,
+                status: newAvailable === 0 ? 'DEPLETED' : 'ACTIVE',
               },
             });
             remaining -= deduct;
@@ -218,7 +278,7 @@ async function inventoryRoutes(fastify) {
         fastify.prisma.stockAdjustment.count({ where }),
       ]);
 
-      return createPaginatedResponse(adjustments, total, page, limit);
+      return createPaginatedResponse(convertPrismaToJson(adjustments), total, page, limit);
     } catch (error) {
       handleError(reply, error);
     }
@@ -247,7 +307,7 @@ async function inventoryRoutes(fastify) {
         .filter((p) => p.totalStock <= p.minStockLevel)
         .sort((a, b) => a.totalStock - b.totalStock);
 
-      return lowStockProducts;
+      return convertPrismaToJson(lowStockProducts);
     } catch (error) {
       handleError(reply, error);
     }
@@ -276,7 +336,7 @@ async function inventoryRoutes(fastify) {
         orderBy: { expiryDate: 'asc' },
       });
 
-      return batches;
+      return convertPrismaToJson(batches);
     } catch (error) {
       handleError(reply, error);
     }
@@ -326,7 +386,7 @@ async function inventoryRoutes(fastify) {
         },
       });
 
-      return { totalProducts, totalStockQuantity, inventoryValue, lowStockCount, outOfStockCount, expiringSoonCount };
+      return convertPrismaToJson({ totalProducts, totalStockQuantity, inventoryValue, lowStockCount, outOfStockCount, expiringSoonCount });
     } catch (error) {
       handleError(reply, error);
     }

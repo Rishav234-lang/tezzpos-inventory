@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
-const { loginSchema, changePasswordSchema } = require('../utils/validators');
-const { handleError, UnauthorizedError } = require('../utils/errors');
+const { loginSchema, changePasswordSchema, registerSchema } = require('../utils/validators');
+const { handleError, UnauthorizedError, ValidationError } = require('../utils/errors');
 
 async function authRoutes(fastify) {
   // Super Admin Login
@@ -26,6 +26,90 @@ async function authRoutes(fastify) {
     }
   });
 
+  // Owner Registration
+  fastify.post('/register', async (request, reply) => {
+    try {
+      const data = registerSchema.parse(request.body);
+
+      const existingCompany = await fastify.prisma.company.findUnique({ where: { email: data.companyEmail } });
+      if (existingCompany) throw new ValidationError('Company email already exists');
+
+      const existingOwner = await fastify.prisma.owner.findUnique({ where: { email: data.ownerEmail } });
+      if (existingOwner) throw new ValidationError('Owner email already exists');
+
+      const hashedPassword = await bcrypt.hash(data.ownerPassword, 10);
+      const now = new Date();
+      const trialEndDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+      let planId = data.planId;
+      if (!planId) {
+        const defaultPlan = await fastify.prisma.plan.findFirst({
+          where: { status: 'ACTIVE' },
+          orderBy: { monthlyPrice: 'asc' },
+        });
+        if (defaultPlan) planId = defaultPlan.id;
+      }
+
+      const company = await fastify.prisma.company.create({
+        data: {
+          name: data.companyName,
+          email: data.companyEmail,
+          phone: data.companyPhone,
+          address: data.companyAddress,
+          gstNumber: data.companyGstNumber,
+          status: 'ACTIVE',
+          owner: {
+            create: {
+              name: data.ownerName,
+              email: data.ownerEmail,
+              password: hashedPassword,
+            },
+          },
+          ...(planId ? {
+            subscription: {
+              create: {
+                planId,
+                billingCycle: data.billingCycle || 'MONTHLY',
+                startDate: now,
+                endDate: trialEndDate,
+                status: 'TRIAL',
+                autoRenew: true,
+              },
+            },
+          } : {}),
+        },
+        include: {
+          owner: { select: { id: true, name: true, email: true } },
+          subscription: true,
+        },
+      });
+
+      const token = fastify.jwt.sign({
+        id: company.owner.id,
+        email: company.owner.email,
+        companyId: company.id,
+        role: 'owner',
+      });
+
+      return {
+        token,
+        user: {
+          id: company.owner.id,
+          email: company.owner.email,
+          name: company.owner.name,
+          companyId: company.id,
+          companyName: company.name,
+          companyStatus: company.status,
+          role: 'owner',
+          subscriptionStatus: company.subscription?.status || null,
+          subscriptionEndDate: company.subscription?.endDate || null,
+        },
+      };
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
   // Owner Login
   fastify.post('/login', async (request, reply) => {
     try {
@@ -34,7 +118,7 @@ async function authRoutes(fastify) {
 
       const owner = await fastify.prisma.owner.findUnique({
         where: { email },
-        include: { company: true },
+        include: { company: { include: { subscription: true } } },
       });
       if (!owner) {
         console.log('[DEBUG] Owner not found for email:', email);
@@ -71,6 +155,8 @@ async function authRoutes(fastify) {
           companyName: owner.company.name,
           companyStatus: owner.company.status,
           role: 'owner',
+          subscriptionStatus: owner.company.subscription?.status || null,
+          subscriptionEndDate: owner.company.subscription?.endDate || null,
         },
       };
     } catch (error) {
@@ -114,9 +200,21 @@ async function authRoutes(fastify) {
 
       const owner = await fastify.prisma.owner.findUnique({
         where: { id: request.user.id },
-        include: { company: { select: { id: true, name: true, status: true } } },
+        include: { company: { include: { subscription: true } } },
       });
-      return { ...owner, password: undefined, role: 'owner' };
+      if (!owner) throw new UnauthorizedError('User not found');
+      return {
+        id: owner.id,
+        email: owner.email,
+        name: owner.name,
+        phone: owner.phone,
+        companyId: owner.companyId,
+        companyName: owner.company.name,
+        companyStatus: owner.company.status,
+        role: 'owner',
+        subscriptionStatus: owner.company.subscription?.status || null,
+        subscriptionEndDate: owner.company.subscription?.endDate || null,
+      };
     } catch (error) {
       handleError(reply, error);
     }

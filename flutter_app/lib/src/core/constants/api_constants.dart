@@ -1,6 +1,6 @@
 class ApiConstants {
   // Change this to your backend URL
-  static const String baseUrl = 'http://localhost:4000';
+  static const String baseUrl = 'https://secretary-nature-findarticles-widescreen.trycloudflare.com';
 
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
@@ -8,6 +8,7 @@ class ApiConstants {
 
   // Auth
   static const String ownerLogin = '/api/auth/login';
+  static const String companyRegister = '/api/auth/register';
   static const String superAdminLogin = '/api/auth/super-admin/login';
   static const String changePassword = '/api/auth/change-password';
   static const String me = '/api/auth/me';
@@ -16,6 +17,7 @@ class ApiConstants {
   static const String superAdminDashboard = '/api/super-admin/dashboard';
   static const String companies = '/api/super-admin/companies';
   static const String plans = '/api/super-admin/plans';
+  static const String expireCompanyNow = '/api/super-admin/companies'; // + /:id/expire-now
 
   // Company
   static const String companyProfile = '/api/companies/profile';
@@ -68,6 +70,11 @@ class ApiConstants {
   static const String mySubscription = '/api/subscriptions/me';
   static const String createOrder = '/api/subscriptions/create-order';
   static const String verifyPayment = '/api/subscriptions/verify-payment';
+  static const String createRazorpaySubscription = '/api/subscriptions/create-subscription';
+  static const String cancelRazorpaySubscription = '/api/subscriptions/cancel-subscription';
+  static const String toggleAutoRenew = '/api/subscriptions/auto-renew';
+  static const String subscriptionPayments = '/api/subscriptions/payments';
+  static const String webCheckout = '/api/subscriptions/web-checkout';
 
   // Invoices
   static const String invoices = '/api/invoices';

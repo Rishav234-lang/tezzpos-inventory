@@ -125,7 +125,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, String userName) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: const BoxDecoration(
         gradient: AppColors.primaryGradient,
         borderRadius: BorderRadius.only(
@@ -133,7 +133,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           bottomRight: Radius.circular(24),
         ),
       ),
-      child: Column(
+      child: SafeArea(
+        bottom: false,
+        child: Column(
         children: [
           Row(
             children: [
@@ -247,6 +249,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ],
+        ),
       ),
     );
   }

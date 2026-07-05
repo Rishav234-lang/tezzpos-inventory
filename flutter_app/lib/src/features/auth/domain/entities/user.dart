@@ -9,6 +9,8 @@ class User extends Equatable {
   final String? companyName;
   final String? companyStatus;
   final String? token;
+  final String? subscriptionStatus;
+  final DateTime? subscriptionEndDate;
 
   const User({
     required this.id,
@@ -19,6 +21,8 @@ class User extends Equatable {
     this.companyName,
     this.companyStatus,
     this.token,
+    this.subscriptionStatus,
+    this.subscriptionEndDate,
   });
 
   bool get isSuperAdmin => role == 'super_admin';
@@ -33,6 +37,8 @@ class User extends Equatable {
     String? companyName,
     String? companyStatus,
     String? token,
+    String? subscriptionStatus,
+    DateTime? subscriptionEndDate,
   }) {
     return User(
       id: id ?? this.id,
@@ -43,6 +49,8 @@ class User extends Equatable {
       companyName: companyName ?? this.companyName,
       companyStatus: companyStatus ?? this.companyStatus,
       token: token ?? this.token,
+      subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+      subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
     );
   }
 
@@ -56,6 +64,8 @@ class User extends Equatable {
       'companyName': companyName,
       'companyStatus': companyStatus,
       'token': token,
+      'subscriptionStatus': subscriptionStatus,
+      'subscriptionEndDate': subscriptionEndDate?.toIso8601String(),
     };
   }
 
@@ -69,9 +79,13 @@ class User extends Equatable {
       companyName: map['companyName'],
       companyStatus: map['companyStatus'],
       token: map['token'],
+      subscriptionStatus: map['subscriptionStatus'],
+      subscriptionEndDate: map['subscriptionEndDate'] != null
+          ? DateTime.tryParse(map['subscriptionEndDate'])
+          : null,
     );
   }
 
   @override
-  List<Object?> get props => [id, email, name, role, companyId, companyName, companyStatus, token];
+  List<Object?> get props => [id, email, name, role, companyId, companyName, companyStatus, token, subscriptionStatus, subscriptionEndDate];
 }

@@ -139,13 +139,13 @@ class _CompaniesListScreenState extends ConsumerState<CompaniesListScreen> {
   }
 }
 
-class _CompanyTile extends StatelessWidget {
+class _CompanyTile extends ConsumerWidget {
   final Company company;
 
   const _CompanyTile({required this.company});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Color statusColor;
     if (company.isActive) {
       statusColor = const Color(0xFF2E7D32);
@@ -190,6 +190,53 @@ class _CompanyTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(company.status, style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(width: 8),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              onSelected: (value) async {
+                if (value == 'expire') {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('End Grace Period?'),
+                      content: const Text('This will immediately expire the subscription and suspend the company. The owner will be redirected to the payment screen on next login.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Expire Now', style: TextStyle(color: AppColors.error)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    final notifier = ref.read(superAdminNotifierProvider.notifier);
+                    final success = await notifier.expireCompanyNow(company.id);
+                    if (success) {
+                      ref.invalidate(companiesProvider(const CompanyFilter()));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Subscription expired. Grace period ended.'), backgroundColor: AppColors.success),
+                        );
+                      }
+                    } else if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(notifier.lastError ?? 'Failed to expire'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  }
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'expire', child: Row(
+                  children: [
+                    Icon(Icons.timer_off, color: AppColors.error, size: 18),
+                    SizedBox(width: 8),
+                    Text('End Grace Period'),
+                  ],
+                )),
+              ],
             ),
           ],
         ),

@@ -3,8 +3,11 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String chooseRole = '/choose-role';
   static const String companyLogin = '/company-login';
+  static const String companyRegister = '/company-register';
   static const String superAdminLogin = '/super-admin-login';
   static const String forgotPassword = '/forgot-password';
+  static const String subscriptionExpired = '/subscription-expired';
+  static const String subscriptionManagement = '/subscription-management';
   static const String dashboard = '/dashboard';
   static const String categories = '/categories';
   static const String categoryDetail = '/categories/detail';

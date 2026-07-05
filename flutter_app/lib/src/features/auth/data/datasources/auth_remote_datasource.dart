@@ -15,6 +15,19 @@ abstract class AuthRemoteDataSource {
     required String password,
   });
 
+  Future<UserModel> registerCompany({
+    required String companyName,
+    required String companyEmail,
+    String? companyPhone,
+    String? companyAddress,
+    String? companyGstNumber,
+    required String ownerName,
+    required String ownerEmail,
+    required String ownerPassword,
+    String? planId,
+    String? billingCycle,
+  });
+
   Future<UserModel> getCurrentUser();
 
   Future<void> changePassword({
@@ -69,6 +82,45 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return UserModel.fromJson(response.data);
       }
       throw const ServerFailure(message: 'Login failed');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  @override
+  Future<UserModel> registerCompany({
+    required String companyName,
+    required String companyEmail,
+    String? companyPhone,
+    String? companyAddress,
+    String? companyGstNumber,
+    required String ownerName,
+    required String ownerEmail,
+    required String ownerPassword,
+    String? planId,
+    String? billingCycle,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.companyRegister,
+        data: {
+          'companyName': companyName,
+          'companyEmail': companyEmail,
+          'companyPhone': companyPhone,
+          'companyAddress': companyAddress,
+          'companyGstNumber': companyGstNumber,
+          'ownerName': ownerName,
+          'ownerEmail': ownerEmail,
+          'ownerPassword': ownerPassword,
+          'planId': planId,
+          'billingCycle': billingCycle,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return UserModel.fromJson(response.data);
+      }
+      throw const ServerFailure(message: 'Registration failed');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

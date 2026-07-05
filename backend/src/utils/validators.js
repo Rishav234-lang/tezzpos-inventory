@@ -156,6 +156,20 @@ const companySchema = z.object({
   ownerPassword: z.string().min(6),
 });
 
+// Self-registration validator
+const registerSchema = z.object({
+  companyName: z.string().min(1).max(200),
+  companyEmail: z.string().email(),
+  companyPhone: z.string().max(15).optional().nullable(),
+  companyAddress: z.string().max(500).optional().nullable(),
+  companyGstNumber: z.string().max(20).optional().nullable(),
+  ownerName: z.string().min(1).max(200),
+  ownerEmail: z.string().email(),
+  ownerPassword: z.string().min(6),
+  planId: z.string().optional().nullable(),
+  billingCycle: z.enum(['MONTHLY', 'YEARLY']).optional().nullable(),
+});
+
 // Category validators
 const categorySchema = z.object({
   name: z.string().min(1).max(100),
@@ -167,6 +181,7 @@ const categorySchema = z.object({
 module.exports = {
   loginSchema,
   changePasswordSchema,
+  registerSchema,
   vendorSchema,
   productSchema,
   purchaseSchema,

@@ -51,6 +51,42 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, User>> registerCompany({
+    required String companyName,
+    required String companyEmail,
+    String? companyPhone,
+    String? companyAddress,
+    String? companyGstNumber,
+    required String ownerName,
+    required String ownerEmail,
+    required String ownerPassword,
+    String? planId,
+    String? billingCycle,
+  }) async {
+    try {
+      final user = await remoteDataSource.registerCompany(
+        companyName: companyName,
+        companyEmail: companyEmail,
+        companyPhone: companyPhone,
+        companyAddress: companyAddress,
+        companyGstNumber: companyGstNumber,
+        ownerName: ownerName,
+        ownerEmail: ownerEmail,
+        ownerPassword: ownerPassword,
+        planId: planId,
+        billingCycle: billingCycle,
+      );
+      await _saveUser(user);
+      _authStateController.add(AuthState(user: user.toEntity()));
+      return Right(user.toEntity());
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, User>> loginSuperAdmin({
     required String email,
     required String password,

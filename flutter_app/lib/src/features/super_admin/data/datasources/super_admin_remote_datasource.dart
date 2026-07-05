@@ -16,6 +16,7 @@ abstract class SuperAdminRemoteDataSource {
   Future<void> approveCompany(String id);
   Future<void> suspendCompany(String id);
   Future<void> activateCompany(String id);
+  Future<void> expireCompanyNow(String id);
   Future<void> resetOwnerPassword(String id, String newPassword);
   Future<void> assignPlan(String companyId, Map<String, dynamic> data);
 
@@ -135,6 +136,21 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
       final response = await _dio.put('${ApiConstants.companies}/$id/activate');
       if (response.statusCode != 200) {
         throw const ServerFailure(message: 'Failed to activate company');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  @override
+  Future<void> expireCompanyNow(String id) async {
+    try {
+      final response = await _dio.put(
+        '${ApiConstants.companies}/$id/expire-now',
+        data: {},
+      );
+      if (response.statusCode != 200) {
+        throw const ServerFailure(message: 'Failed to expire subscription');
       }
     } on DioException catch (e) {
       throw _handleDioError(e);

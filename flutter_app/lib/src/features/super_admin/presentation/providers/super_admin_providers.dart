@@ -188,6 +188,22 @@ class SuperAdminNotifier extends StateNotifier<AsyncValue<void>> {
     );
   }
 
+  Future<bool> expireCompanyNow(String id) async {
+    state = const AsyncValue.loading();
+    final result = await _repository.expireCompanyNow(id);
+    return result.fold(
+      (failure) {
+        _lastError = failure.message;
+        state = AsyncValue.error(failure.message, StackTrace.current);
+        return false;
+      },
+      (_) {
+        state = const AsyncValue.data(null);
+        return true;
+      },
+    );
+  }
+
   Future<bool> resetOwnerPassword(String id, String newPassword) async {
     state = const AsyncValue.loading();
     final result = await _repository.resetOwnerPassword(id, newPassword);

@@ -128,6 +128,18 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
   }
 
   @override
+  Future<Either<Failure, void>> expireCompanyNow(String id) async {
+    try {
+      await remoteDataSource.expireCompanyNow(id);
+      return const Right(null);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> resetOwnerPassword(String id, String newPassword) async {
     try {
       await remoteDataSource.resetOwnerPassword(id, newPassword);

@@ -10,6 +10,8 @@ class UserModel extends User {
     super.companyName,
     super.companyStatus,
     super.token,
+    super.subscriptionStatus,
+    super.subscriptionEndDate,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,10 @@ class UserModel extends User {
       companyName: userData['companyName'],
       companyStatus: userData['companyStatus'],
       token: json['token'] as String?,
+      subscriptionStatus: userData['subscriptionStatus'],
+      subscriptionEndDate: userData['subscriptionEndDate'] != null
+          ? DateTime.tryParse(userData['subscriptionEndDate'])
+          : null,
     );
   }
 
@@ -36,6 +42,8 @@ class UserModel extends User {
       'companyName': companyName,
       'companyStatus': companyStatus,
       'token': token,
+      'subscriptionStatus': subscriptionStatus,
+      'subscriptionEndDate': subscriptionEndDate?.toIso8601String(),
     };
   }
 
@@ -49,6 +57,8 @@ class UserModel extends User {
       companyName: companyName,
       companyStatus: companyStatus,
       token: token,
+      subscriptionStatus: subscriptionStatus,
+      subscriptionEndDate: subscriptionEndDate,
     );
   }
 }

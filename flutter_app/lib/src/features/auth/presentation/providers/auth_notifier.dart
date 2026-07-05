@@ -42,6 +42,37 @@ class AuthNotifier extends StateNotifier<AsyncValue<AuthState>> {
     );
   }
 
+  Future<void> registerCompany({
+    required String companyName,
+    required String companyEmail,
+    String? companyPhone,
+    String? companyAddress,
+    String? companyGstNumber,
+    required String ownerName,
+    required String ownerEmail,
+    required String ownerPassword,
+    String? planId,
+    String? billingCycle,
+  }) async {
+    state = const AsyncValue.loading();
+    final result = await _authRepository.registerCompany(
+      companyName: companyName,
+      companyEmail: companyEmail,
+      companyPhone: companyPhone,
+      companyAddress: companyAddress,
+      companyGstNumber: companyGstNumber,
+      ownerName: ownerName,
+      ownerEmail: ownerEmail,
+      ownerPassword: ownerPassword,
+      planId: planId,
+      billingCycle: billingCycle,
+    );
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (user) {},
+    );
+  }
+
   Future<void> loginSuperAdmin({
     required String email,
     required String password,

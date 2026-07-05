@@ -6,7 +6,10 @@ import '../core/constants/app_constants.dart';
 import '../features/auth/presentation/screens/choose_role_screen.dart';
 import '../features/auth/presentation/screens/company_login_screen.dart';
 import '../features/auth/presentation/screens/super_admin_login_screen.dart';
+import '../features/auth/presentation/screens/company_registration_screen.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../features/subscription/presentation/screens/subscription_expired_screen.dart';
+import '../features/subscription/presentation/screens/subscription_management_screen.dart';
 import '../features/category/presentation/screens/add_edit_category_screen.dart';
 import '../features/category/presentation/screens/categories_screen.dart';
 import '../features/category/presentation/screens/category_detail_screen.dart';
@@ -68,8 +71,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnboarding = state.matchedLocation == AppRoutes.onboarding;
       final isAuthRoute = state.matchedLocation == AppRoutes.chooseRole ||
           state.matchedLocation == AppRoutes.companyLogin ||
+          state.matchedLocation == AppRoutes.companyRegister ||
           state.matchedLocation == AppRoutes.superAdminLogin ||
           state.matchedLocation == AppRoutes.forgotPassword;
+      final isSubscriptionExpiredRoute = state.matchedLocation == AppRoutes.subscriptionExpired;
+      final isSubscriptionManagementRoute = state.matchedLocation == AppRoutes.subscriptionManagement;
 
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
       final isSuperAdmin = authState.valueOrNull?.user?.isSuperAdmin ?? false;
@@ -81,9 +87,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Still loading auth state - stay on splash
       if (authState.isLoading) return isSplash ? null : AppRoutes.splash;
 
+      // Check subscription expiry for owner
+      final user = authState.valueOrNull?.user;
+      final isOwner = user?.isOwner ?? false;
+      final subscriptionStatus = user?.subscriptionStatus;
+      final subscriptionEndDate = user?.subscriptionEndDate;
+
+      bool isSubscriptionExpired = false;
+      if (isOwner && subscriptionStatus != null) {
+        if (subscriptionStatus == 'EXPIRED' || subscriptionStatus == 'SUSPENDED') {
+          isSubscriptionExpired = true;
+        } else if (subscriptionEndDate != null && subscriptionEndDate.isBefore(DateTime.now())) {
+          isSubscriptionExpired = true;
+        }
+      }
+
+      // Block expired subscriptions from non-allowed routes
+      if (isAuthenticated && isSubscriptionExpired &&
+          !isSubscriptionExpiredRoute && !isSubscriptionManagementRoute && !isAuthRoute && !isSplash && !isOnboarding) {
+        return AppRoutes.subscriptionExpired;
+      }
+
       // Authenticated user trying to access auth/onboarding/splash pages
+      // If subscription is expired, allow them to stay on auth routes (logout/register)
       if (isAuthenticated && (isAuthRoute || isSplash || isOnboarding)) {
-        return isSuperAdmin ? AppRoutes.superAdminDashboard : AppRoutes.dashboard;
+        if (!isSubscriptionExpired) {
+          return isSuperAdmin ? AppRoutes.superAdminDashboard : AppRoutes.dashboard;
+        }
+        return null;
       }
 
       // Not onboarded yet
@@ -125,12 +156,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CompanyLoginScreen(),
       ),
       GoRoute(
+        path: AppRoutes.companyRegister,
+        builder: (context, state) => const CompanyRegistrationScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.superAdminLogin,
         builder: (context, state) => const SuperAdminLoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.subscriptionExpired,
+        builder: (context, state) => const SubscriptionExpiredScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.subscriptionManagement,
+        builder: (context, state) => const SubscriptionManagementScreen(),
       ),
       GoRoute(
         path: AppRoutes.dashboard,

@@ -21,7 +21,21 @@ const registerPlugins = async (app) => {
     credentials: true,
   });
 
-  await app.register(helmet);
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://*.razorpay.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https://*.razorpay.com"],
+        connectSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
+        frameSrc: ["'self'", "https://api.razorpay.com", "https://*.razorpay.com"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  });
 
   await app.register(rateLimit, {
     max: 100,
@@ -131,7 +145,7 @@ const registerPlugins = async (app) => {
         }
 
         // Auto-expire if end date passed
-        const effectiveStatus = subscription.endDate < new Date() && subscription.status === 'ACTIVE'
+        const effectiveStatus = subscription.endDate < new Date() && (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL')
           ? 'EXPIRED'
           : subscription.status;
 

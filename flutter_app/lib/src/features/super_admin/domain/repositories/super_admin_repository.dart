@@ -24,6 +24,7 @@ abstract class SuperAdminRepository {
   Future<Either<Failure, void>> approveCompany(String id);
   Future<Either<Failure, void>> suspendCompany(String id);
   Future<Either<Failure, void>> activateCompany(String id);
+  Future<Either<Failure, void>> expireCompanyNow(String id);
   Future<Either<Failure, void>> resetOwnerPassword(String id, String newPassword);
   Future<Either<Failure, void>> assignPlan(String companyId, {
     required String planId,

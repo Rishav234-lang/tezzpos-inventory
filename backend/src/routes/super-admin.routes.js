@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const { companySchema, planSchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+const { razorpay } = require('../utils/razorpay');
 
 async function superAdminRoutes(fastify) {
   // All routes require super admin auth
@@ -189,27 +190,164 @@ async function superAdminRoutes(fastify) {
     }
   });
 
-  // Suspend Company
+  // Suspend Company (Block Immediately)
   fastify.put('/companies/:id/suspend', async (request, reply) => {
     try {
-      const company = await fastify.prisma.company.update({
-        where: { id: request.params.id },
-        data: { status: 'SUSPENDED' },
+      const companyId = request.params.id;
+
+      // Cancel Razorpay subscription if exists
+      const subscription = await fastify.prisma.companySubscription.findUnique({
+        where: { companyId },
       });
+      if (subscription?.razorpaySubscriptionId) {
+        try {
+          await razorpay.subscriptions.cancel(subscription.razorpaySubscriptionId);
+        } catch (e) {
+          console.log('[WARN] Failed to cancel Razorpay subscription:', e.message);
+        }
+      }
+
+      const [company] = await fastify.prisma.$transaction([
+        fastify.prisma.company.update({
+          where: { id: companyId },
+          data: { status: 'SUSPENDED' },
+        }),
+        fastify.prisma.companySubscription.updateMany({
+          where: { companyId },
+          data: { status: 'SUSPENDED', autoRenew: false },
+        }),
+      ]);
+
+      // Invalidate subscription cache
+      if (fastify.subscriptionCache) fastify.subscriptionCache.delete(companyId);
+
       return company;
     } catch (error) {
       handleError(reply, error);
     }
   });
 
-  // Activate Company
+  // Activate Company (Unblock)
   fastify.put('/companies/:id/activate', async (request, reply) => {
     try {
-      const company = await fastify.prisma.company.update({
-        where: { id: request.params.id },
-        data: { status: 'ACTIVE' },
-      });
+      const companyId = request.params.id;
+
+      const [company] = await fastify.prisma.$transaction([
+        fastify.prisma.company.update({
+          where: { id: companyId },
+          data: { status: 'ACTIVE' },
+        }),
+        fastify.prisma.companySubscription.updateMany({
+          where: { companyId },
+          data: { status: 'ACTIVE' },
+        }),
+      ]);
+
+      // Invalidate subscription cache
+      if (fastify.subscriptionCache) fastify.subscriptionCache.delete(companyId);
+
       return company;
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // Get Company Subscription
+  fastify.get('/companies/:id/subscription', async (request, reply) => {
+    try {
+      const companyId = request.params.id;
+      const subscription = await fastify.prisma.companySubscription.findUnique({
+        where: { companyId },
+        include: { plan: true, payments: { orderBy: { paymentDate: 'desc' }, take: 10 } },
+      });
+      if (!subscription) throw new NotFoundError('Subscription');
+      return subscription;
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // Extend Company Subscription
+  fastify.put('/companies/:id/extend', async (request, reply) => {
+    try {
+      const companyId = request.params.id;
+      const { days, endDate, status } = request.body;
+
+      const subscription = await fastify.prisma.companySubscription.findUnique({
+        where: { companyId },
+      });
+      if (!subscription) throw new NotFoundError('Subscription');
+
+      const updateData = {};
+      if (endDate) {
+        updateData.endDate = new Date(endDate);
+      } else if (days) {
+        const currentEnd = new Date(subscription.endDate);
+        updateData.endDate = new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000);
+      }
+      if (status) updateData.status = status;
+
+      const updated = await fastify.prisma.companySubscription.update({
+        where: { companyId },
+        data: updateData,
+        include: { plan: true },
+      });
+
+      // Also reactivate company if extending
+      if (status === 'ACTIVE' || endDate || days) {
+        await fastify.prisma.company.update({
+          where: { id: companyId },
+          data: { status: 'ACTIVE' },
+        });
+      }
+
+      // Invalidate subscription cache
+      if (fastify.subscriptionCache) fastify.subscriptionCache.delete(companyId);
+
+      return updated;
+    } catch (error) {
+      handleError(reply, error);
+    }
+  });
+
+  // End Grace Period / Immediately Expire Subscription
+  fastify.put('/companies/:id/expire-now', async (request, reply) => {
+    try {
+      const companyId = request.params.id;
+
+      const subscription = await fastify.prisma.companySubscription.findUnique({
+        where: { companyId },
+      });
+      if (!subscription) throw new NotFoundError('Subscription');
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const updated = await fastify.prisma.$transaction(async (tx) => {
+        const sub = await tx.companySubscription.update({
+          where: { companyId },
+          data: {
+            endDate: yesterday,
+            status: 'EXPIRED',
+            autoRenew: false,
+          },
+          include: { plan: true },
+        });
+
+        await tx.company.update({
+          where: { id: companyId },
+          data: { status: 'SUSPENDED' },
+        });
+
+        return sub;
+      });
+
+      if (fastify.subscriptionCache) fastify.subscriptionCache.delete(companyId);
+
+      return {
+        message: 'Subscription expired immediately. Grace period ended.',
+        subscription: updated,
+      };
     } catch (error) {
       handleError(reply, error);
     }

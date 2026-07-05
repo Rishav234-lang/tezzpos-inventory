@@ -14,6 +14,19 @@ abstract class AuthRepository {
     required String password,
   });
 
+  Future<Either<Failure, User>> registerCompany({
+    required String companyName,
+    required String companyEmail,
+    String? companyPhone,
+    String? companyAddress,
+    String? companyGstNumber,
+    required String ownerName,
+    required String ownerEmail,
+    required String ownerPassword,
+    String? planId,
+    String? billingCycle,
+  });
+
   Future<Either<Failure, void>> logout();
 
   Future<Either<Failure, User?>> getCurrentUser();

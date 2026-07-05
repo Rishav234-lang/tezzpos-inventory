@@ -233,6 +233,19 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
 
                   const SizedBox(height: 24),
 
+                  // Create account
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => context.push(AppRoutes.companyRegister),
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                      label: const Text('Create New Account'),
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(delay: const Duration(milliseconds: 800)),
+
+                  const SizedBox(height: 8),
+
                   // Switch to super admin
                   Center(
                     child: TextButton.icon(
@@ -242,7 +255,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                     ),
                   )
                       .animate()
-                      .fadeIn(delay: const Duration(milliseconds: 800)),
+                      .fadeIn(delay: const Duration(milliseconds: 900)),
                 ],
               ),
             ),

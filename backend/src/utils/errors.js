@@ -11,6 +11,7 @@ class NotFoundError extends AppError {
   }
 }
 
+
 class ValidationError extends AppError {
   constructor(message = 'Validation failed') {
     super(message, 400);

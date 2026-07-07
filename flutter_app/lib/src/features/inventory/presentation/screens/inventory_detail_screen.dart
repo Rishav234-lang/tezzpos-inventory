@@ -44,18 +44,33 @@ class InventoryDetailScreen extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.tune, color: AppColors.primary),
-              title: const Text('Stock Adjustment'),
-              onTap: () { ctx.pop(); context.push(AppRoutes.stockAdjustment); },
+              title: const Text('Adjust Stock'),
+              onTap: () {
+                ctx.pop();
+                context.push(AppRoutes.stockAdjustment);
+              },
             ),
             ListTile(
-              leading: const Icon(Icons.view_list_outlined, color: AppColors.primary),
-              title: const Text('View Batches'),
-              onTap: () { ctx.pop(); context.push('${AppRoutes.productBatches}/$productId'); },
+              leading: const Icon(
+                Icons.view_list_outlined,
+                color: AppColors.primary,
+              ),
+              title: const Text('View Stock Details'),
+              onTap: () {
+                ctx.pop();
+                context.push('${AppRoutes.productBatches}/$productId');
+              },
             ),
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: AppColors.primary,
+              ),
               title: const Text('Edit Product'),
-              onTap: () { ctx.pop(); context.push('${AppRoutes.editProduct}/$productId'); },
+              onTap: () {
+                ctx.pop();
+                context.push('${AppRoutes.editProduct}/$productId');
+              },
             ),
           ],
         ),
@@ -102,10 +117,13 @@ class InventoryDetailScreen extends ConsumerWidget {
             onPressed: () => context.pop(),
             icon: const Icon(Icons.arrow_back),
           ),
-          title: const Text('Inventory Details'),
+          title: const Text('Stock Details'),
+          backgroundColor: AppColors.background,
+          surfaceTintColor: AppColors.background,
           actions: [
             IconButton(
-              onPressed: () => context.push('${AppRoutes.editProduct}/$productId'),
+              onPressed: () =>
+                  context.push('${AppRoutes.editProduct}/$productId'),
               icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
             ),
             IconButton(
@@ -131,9 +149,18 @@ class InventoryDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
 
                 // Stock Overview
-                _buildSectionTitle(context, 'Stock Overview'),
+                _buildSectionTitle(context, 'Stock Summary'),
                 const SizedBox(height: 12),
-                _buildStockOverview(context, product, currency, dateFormat, stockValue, stockValueMrp, expiryAlert, expiryColor),
+                _buildStockOverview(
+                  context,
+                  product,
+                  currency,
+                  dateFormat,
+                  stockValue,
+                  stockValueMrp,
+                  expiryAlert,
+                  expiryColor,
+                ),
                 const SizedBox(height: 20),
 
                 // Actions
@@ -195,7 +222,11 @@ class InventoryDetailScreen extends ConsumerWidget {
                   : null,
             ),
             child: product.imageUrl == null || product.imageUrl!.isEmpty
-                ? Icon(Icons.inventory_2_outlined, color: AppColors.onSurfaceVariant, size: 32)
+                ? Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.onSurfaceVariant,
+                    size: 32,
+                  )
                 : null,
           ),
           const SizedBox(width: 14),
@@ -203,16 +234,32 @@ class InventoryDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(product.name, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  product.name,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text('SKU: ${product.sku ?? 'N/A'}',
-                    style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant)),
-                Text('Barcode: ${product.barcode ?? 'N/A'}',
-                    style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant)),
+                Text(
+                  'SKU: ${product.sku ?? 'N/A'}',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  'Barcode: ${product.barcode ?? 'N/A'}',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _LabelValue(label: 'Category', value: product.categoryName ?? 'N/A'),
+                    _LabelValue(
+                      label: 'Category',
+                      value: product.categoryName ?? 'N/A',
+                    ),
                     const SizedBox(width: 24),
                     _LabelValue(label: 'Unit', value: product.unit),
                   ],
@@ -222,16 +269,29 @@ class InventoryDetailScreen extends ConsumerWidget {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
-            child: Text(statusText,
-                style: context.textTheme.labelSmall?.copyWith(color: statusFg, fontWeight: FontWeight.w600, fontSize: 10)),
+            decoration: BoxDecoration(
+              color: statusBg,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              statusText,
+              style: context.textTheme.labelSmall?.copyWith(
+                color: statusFg,
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickMetrics(BuildContext context, Product product, NumberFormat currency) {
+  Widget _buildQuickMetrics(
+    BuildContext context,
+    Product product,
+    NumberFormat currency,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
@@ -269,7 +329,9 @@ class InventoryDetailScreen extends ConsumerWidget {
             icon: Icons.sell_outlined,
             iconColor: const Color(0xFF6A1B9A),
             iconBg: const Color(0xFFF3E5F5),
-            value: product.firstMrp != null ? '₹ ${currency.format(product.firstMrp)}' : 'N/A',
+            value: product.firstMrp != null
+                ? '₹ ${currency.format(product.firstMrp)}'
+                : 'N/A',
             label: 'MRP',
           ),
         ],
@@ -277,21 +339,44 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _divider() => Container(width: 1, height: 48, color: AppColors.outline.withValues(alpha: 0.15));
+  Widget _divider() => Container(
+    width: 1,
+    height: 48,
+    color: AppColors.outline.withValues(alpha: 0.15),
+  );
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Row(
       children: [
-        Container(width: 3, height: 18,
-            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+        Container(
+          width: 3,
+          height: 18,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
         const SizedBox(width: 8),
-        Text(title, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          title,
+          style: context.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildStockOverview(BuildContext context, Product product, NumberFormat currency,
-      DateFormat dateFormat, double stockValue, double stockValueMrp, String expiryAlert, Color expiryColor) {
+  Widget _buildStockOverview(
+    BuildContext context,
+    Product product,
+    NumberFormat currency,
+    DateFormat dateFormat,
+    double stockValue,
+    double stockValueMrp,
+    String expiryAlert,
+    Color expiryColor,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -301,13 +386,26 @@ class InventoryDetailScreen extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          _OverviewRow(label: 'Low Stock Level', value: '${product.minStockLevel} pcs'),
+          _OverviewRow(
+            label: 'Low Stock Level',
+            value: '${product.minStockLevel} pcs',
+          ),
           const Divider(height: 20),
-          _OverviewRow(label: 'In Stock', value: '${product.totalStock} pcs', valueColor: const Color(0xFF388E3C)),
+          _OverviewRow(
+            label: 'In Stock',
+            value: '${product.totalStock} pcs',
+            valueColor: const Color(0xFF388E3C),
+          ),
           const Divider(height: 20),
-          _OverviewRow(label: 'Stock Value (Cost)', value: '₹ ${currency.format(stockValue)}'),
+          _OverviewRow(
+            label: 'Stock Value (Cost)',
+            value: '₹ ${currency.format(stockValue)}',
+          ),
           const Divider(height: 20),
-          _OverviewRow(label: 'Stock Value (MRP)', value: '₹ ${currency.format(stockValueMrp)}'),
+          _OverviewRow(
+            label: 'Stock Value (MRP)',
+            value: '₹ ${currency.format(stockValueMrp)}',
+          ),
           if (product.firstExpiryDate != null) ...[
             const Divider(height: 20),
             _OverviewRow(
@@ -316,7 +414,11 @@ class InventoryDetailScreen extends ConsumerWidget {
             ),
           ],
           const Divider(height: 20),
-          _OverviewRow(label: 'Expiry Alert', value: expiryAlert, valueColor: expiryColor),
+          _OverviewRow(
+            label: 'Expiry Alert',
+            value: expiryAlert,
+            valueColor: expiryColor,
+          ),
         ],
       ),
     );
@@ -327,13 +429,13 @@ class InventoryDetailScreen extends ConsumerWidget {
       _ActionData(
         icon: Icons.tune,
         label: 'Stock\nAdjustment',
-        iconBg: const Color(0xFFE3F2FD),
-        iconColor: const Color(0xFF1976D2),
+        iconBg: AppColors.primaryContainer,
+        iconColor: AppColors.primary,
         onTap: () => context.push('${AppRoutes.stockAdjustment}/${product.id}'),
       ),
       _ActionData(
         icon: Icons.layers_outlined,
-        label: 'View\nBatches',
+        label: 'Stock\nDetails',
         iconBg: const Color(0xFFE8F5E9),
         iconColor: const Color(0xFF388E3C),
         onTap: () => context.push('${AppRoutes.productBatches}/${product.id}'),
@@ -356,40 +458,53 @@ class InventoryDetailScreen extends ConsumerWidget {
 
     return Row(
       children: actions
-          .map((a) => Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Material(
-                    color: AppColors.surface,
+          .map(
+            (a) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Material(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    onTap: a.onTap,
                     borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      onTap: a.onTap,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.outline.withValues(alpha: 0.1)),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.outline.withValues(alpha: 0.1),
                         ),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 40, height: 40,
-                              decoration: BoxDecoration(color: a.iconBg, borderRadius: BorderRadius.circular(12)),
-                              child: Icon(a.icon, size: 20, color: a.iconColor),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: a.iconBg,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(height: 8),
-                            Text(a.label,
-                                textAlign: TextAlign.center,
-                                style: context.textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.w600, fontSize: 10, height: 1.3)),
-                          ],
-                        ),
+                            child: Icon(a.icon, size: 20, color: a.iconColor),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            a.label,
+                            textAlign: TextAlign.center,
+                            style: context.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ))
+              ),
+            ),
+          )
           .toList(),
     );
   }
@@ -399,16 +514,32 @@ class InventoryDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
+          ),
+        ],
       ),
       child: ElevatedButton.icon(
-        onPressed: () => context.push('${AppRoutes.stockAdjustment}/${product.id}'),
+        onPressed: () =>
+            context.push('${AppRoutes.stockAdjustment}/${product.id}'),
         icon: const Icon(Icons.tune, color: Colors.white),
-        label: const Text('Stock Adjustment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+        label: const Text(
+          'Adjust Stock',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
           elevation: 0,
         ),
       ),
@@ -427,7 +558,10 @@ class InventoryDetailScreen extends ConsumerWidget {
             (_) => Container(
               height: 80,
               margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
         ),
@@ -447,8 +581,19 @@ class _LabelValue extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 10)),
-        Text(value, style: context.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: context.textTheme.labelSmall?.copyWith(
+            color: AppColors.onSurfaceVariant,
+            fontSize: 10,
+          ),
+        ),
+        Text(
+          value,
+          style: context.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
@@ -478,17 +623,31 @@ class _QuickMetric extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, size: 18, color: iconColor),
           ),
           const SizedBox(height: 6),
-          Text(value,
-              style: context.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 12),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+          Text(
+            value,
+            style: context.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 2),
-          Text(label, style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 10)),
+          Text(
+            label,
+            style: context.textTheme.labelSmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+              fontSize: 10,
+            ),
+          ),
         ],
       ),
     );
@@ -500,19 +659,30 @@ class _OverviewRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _OverviewRow({required this.label, required this.value, this.valueColor});
+  const _OverviewRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: context.textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant)),
-        Text(value,
-            style: context.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: valueColor ?? AppColors.onSurface,
-            )),
+        Text(
+          label,
+          style: context.textTheme.bodyMedium?.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        Text(
+          value,
+          style: context.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? AppColors.onSurface,
+          ),
+        ),
       ],
     );
   }

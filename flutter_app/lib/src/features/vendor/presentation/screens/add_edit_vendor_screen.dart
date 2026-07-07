@@ -13,7 +13,8 @@ class AddEditVendorScreen extends ConsumerStatefulWidget {
   const AddEditVendorScreen({super.key, this.vendorId});
 
   @override
-  ConsumerState<AddEditVendorScreen> createState() => _AddEditVendorScreenState();
+  ConsumerState<AddEditVendorScreen> createState() =>
+      _AddEditVendorScreenState();
 }
 
 class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
@@ -61,7 +62,10 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(isEdit ? 'Edit Vendor' : 'Add Vendor'),
+        title: Text(isEdit ? 'Edit Supplier' : 'Create Supplier'),
+        backgroundColor: AppColors.background,
+        surfaceTintColor: AppColors.background,
+        elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back),
@@ -74,14 +78,21 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
           children: [
             _buildLogoArea(context),
             const SizedBox(height: 24),
-            _buildLabel('Vendor Name', required: true),
+            _buildSimpleHeader(
+              icon: Icons.storefront_outlined,
+              title: 'Supplier Details',
+              subtitle:
+                  'Agency name is required. Mobile and address can be added later.',
+            ),
+            const SizedBox(height: 18),
+            _buildLabel('Supplier / Agency Name', required: true),
             const SizedBox(height: 6),
             TextField(
               controller: _nameController,
-              decoration: _inputDecoration('Enter vendor name'),
+              decoration: _inputDecoration('Enter supplier name'),
             ),
             const SizedBox(height: 16),
-            _buildLabel('Mobile Number', required: true),
+            _buildLabel('Mobile Number'),
             const SizedBox(height: 6),
             TextField(
               controller: _mobileController,
@@ -122,7 +133,7 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildLabel('Address', required: true),
+            _buildLabel('Address'),
             const SizedBox(height: 6),
             TextField(
               controller: _addressController,
@@ -171,7 +182,7 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(isEdit ? 'Update Vendor' : 'Save Vendor'),
+                    : Text(isEdit ? 'Update Supplier' : 'Create Supplier'),
               ),
             ),
             const SizedBox(height: 24),
@@ -185,7 +196,9 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
     return Center(
       child: GestureDetector(
         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logo upload will be available in a future update')),
+          const SnackBar(
+            content: Text('Logo upload will be available in a future update'),
+          ),
         ),
         child: Container(
           width: double.infinity,
@@ -193,9 +206,7 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.outline.withValues(alpha: 0.3),
-            ),
+            border: Border.all(color: AppColors.outline.withValues(alpha: 0.3)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -207,22 +218,18 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
                   color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.image,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
+                child: Icon(Icons.image, color: AppColors.primary, size: 24),
               ),
               const SizedBox(height: 10),
               Text(
-                'Upload Vendor Logo',
+                'Supplier Photo',
                 style: context.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'JPG, PNG up to 2MB',
+                'Optional',
                 style: context.textTheme.labelSmall?.copyWith(
                   color: AppColors.onSurfaceVariant,
                   fontSize: 10,
@@ -235,14 +242,65 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
     );
   }
 
+  Widget _buildSimpleHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusChip(String label, bool isActive) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFE3F2FD) : AppColors.surface,
+        color: isActive ? AppColors.primaryContainer : AppColors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isActive ? AppColors.primary : AppColors.outline.withValues(alpha: 0.3),
+          color: isActive
+              ? AppColors.primary
+              : AppColors.outline.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -258,11 +316,7 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
           ),
           if (isActive) ...[
             const SizedBox(width: 6),
-            Icon(
-              Icons.check_circle,
-              size: 16,
-              color: AppColors.primary,
-            ),
+            Icon(Icons.check_circle, size: 16, color: AppColors.primary),
           ],
         ],
       ),
@@ -299,15 +353,19 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
       filled: true,
       fillColor: AppColors.surface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: AppColors.outline.withValues(alpha: 0.16),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: AppColors.outline.withValues(alpha: 0.16),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AppColors.primary),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -317,44 +375,34 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter vendor name')),
-      );
-      return;
-    }
-
-    final mobile = _mobileController.text.trim();
-    if (mobile.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter mobile number')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter vendor name')));
       return;
     }
 
     final address = _addressController.text.trim();
-    if (address.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter address')),
-      );
-      return;
-    }
+    final mobile = _mobileController.text.trim();
 
     setState(() => _isSaving = true);
 
     final data = {
       'name': name,
-      'mobile': mobile,
-      'gstNumber': _gstController.text.trim().isNotEmpty ? _gstController.text.trim() : null,
-      'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-      'address': address,
+      'mobile': mobile.isNotEmpty ? mobile : null,
+      'gstNumber': _gstController.text.trim().isNotEmpty
+          ? _gstController.text.trim()
+          : null,
+      'email': _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : null,
+      'address': address.isNotEmpty ? address : null,
       'status': _isActive ? 'ACTIVE' : 'INACTIVE',
     };
 
     if (isEdit) {
-      await ref.read(vendorNotifierProvider.notifier).updateVendor(
-            widget.vendorId!,
-            data,
-          );
+      await ref
+          .read(vendorNotifierProvider.notifier)
+          .updateVendor(widget.vendorId!, data);
     } else {
       await ref.read(vendorNotifierProvider.notifier).createVendor(data);
     }
@@ -371,12 +419,13 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
         ),
       );
     } else {
-      ref.invalidate(vendorsProvider(
-          VendorFilter(search: null, page: 1, limit: 20)));
+      ref.invalidate(
+        vendorsProvider(VendorFilter(search: null, page: 1, limit: 20)),
+      );
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isEdit ? 'Vendor updated' : 'Vendor created'),
+          content: Text(isEdit ? 'Supplier updated' : 'Supplier created'),
         ),
       );
     }

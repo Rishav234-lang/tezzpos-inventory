@@ -8,12 +8,13 @@ async function dashboardRoutes(fastify) {
   fastify.get('/', async (request, reply) => {
     try {
       const companyId = request.user.companyId;
+      const { startDate, endDate } = request.query;
 
-      // Use UTC-based dates so Prisma comparisons are reliable
       const now = new Date();
-      const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-      const tomorrow = new Date(today);
-      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      const selectedStart = startDate ? new Date(startDate) : new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+      const selectedEnd = endDate ? new Date(endDate) : new Date(selectedStart.getTime() + 24 * 60 * 60 * 1000);
+      const today = selectedStart;
+      const tomorrow = selectedEnd;
       const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
 
       fastify.log.info(`[Dashboard] companyId=${companyId} today=${today.toISOString()} tomorrow=${tomorrow.toISOString()} monthStart=${monthStart.toISOString()}`);
@@ -169,8 +170,15 @@ async function dashboardRoutes(fastify) {
   // Recent Sales
   fastify.get('/recent-sales', async (request, reply) => {
     try {
+      const { startDate, endDate } = request.query;
+      const where = { companyId: request.user.companyId };
+      if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = new Date(startDate);
+        if (endDate) where.createdAt.lt = new Date(endDate);
+      }
       const sales = await fastify.prisma.sale.findMany({
-        where: { companyId: request.user.companyId },
+        where,
         include: { customer: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         take: 10,
@@ -184,8 +192,15 @@ async function dashboardRoutes(fastify) {
   // Recent Purchases
   fastify.get('/recent-purchases', async (request, reply) => {
     try {
+      const { startDate, endDate } = request.query;
+      const where = { companyId: request.user.companyId };
+      if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = new Date(startDate);
+        if (endDate) where.createdAt.lt = new Date(endDate);
+      }
       const purchases = await fastify.prisma.purchase.findMany({
-        where: { companyId: request.user.companyId },
+        where,
         include: { vendor: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         take: 10,
@@ -278,10 +293,17 @@ async function dashboardRoutes(fastify) {
   fastify.get('/charts/top-products', async (request, reply) => {
     try {
       const companyId = request.user.companyId;
+      const { startDate, endDate } = request.query;
+      const saleWhere = { sale: { companyId } };
+      if (startDate || endDate) {
+        saleWhere.sale.invoiceDate = {};
+        if (startDate) saleWhere.sale.invoiceDate.gte = new Date(startDate);
+        if (endDate) saleWhere.sale.invoiceDate.lt = new Date(endDate);
+      }
 
       const items = await fastify.prisma.saleItem.groupBy({
         by: ['productId'],
-        where: { sale: { companyId } },
+        where: saleWhere,
         _sum: { quantity: true, totalAmount: true },
         orderBy: { _sum: { totalAmount: 'desc' } },
         take: 10,

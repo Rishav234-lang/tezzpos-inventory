@@ -54,7 +54,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 100,
+            expandedHeight: 112,
             pinned: true,
             backgroundColor: AppColors.primary,
             leading: IconButton(
@@ -65,13 +65,19 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               IconButton(
                 icon: const Icon(Icons.add, color: Colors.white),
                 onPressed: () => context.push(AppRoutes.addProduct),
-                tooltip: 'Add Product',
+                tooltip: 'Create Product',
               ),
               const SizedBox(width: 4),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                decoration: const BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                ),
                 child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
@@ -79,15 +85,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text('Products',
-                            style: context.textTheme.headlineSmall?.copyWith(
-                              color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Products',
+                          style: context.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         Text(
                           _selectedCategoryId == null
                               ? '$totalCount products'
                               : '$totalCount in selected category',
                           style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85)),
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
                         ),
                       ],
                     ),
@@ -114,10 +125,19 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       child: Center(
                         child: Column(
                           children: [
-                            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                              size: 48,
+                            ),
                             const SizedBox(height: 12),
-                            Text('Failed to load products',
-                                style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                            Text(
+                              'Failed to load products',
+                              style: TextStyle(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -132,9 +152,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.addProduct),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.success,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Product', style: TextStyle(color: Colors.white)),
+        label: const Text(
+          'Create Product',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
@@ -143,10 +166,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.outline.withValues(alpha: 0.25)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: TextField(
@@ -155,18 +182,31 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           _debouncer.run(() => setState(() {}));
         },
         decoration: InputDecoration(
-          hintText: 'Search by name, SKU or barcode...',
-          hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
-          prefixIcon: Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 20),
+          hintText: 'Search product...',
+          hintStyle: TextStyle(
+            color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+            fontSize: 13,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: AppColors.onSurfaceVariant,
+            size: 20,
+          ),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear, size: 18),
                   color: AppColors.onSurfaceVariant,
-                  onPressed: () { _searchController.clear(); setState(() {}); },
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {});
+                  },
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 13,
+          ),
         ),
       ),
     );
@@ -214,7 +254,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   Widget _buildProductList(List<Product> products) {
     if (products.isEmpty) {
-      final isSearching = _searchController.text.isNotEmpty || _selectedCategoryId != null;
+      final isSearching =
+          _searchController.text.isNotEmpty || _selectedCategoryId != null;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 60),
         child: Center(
@@ -222,25 +263,33 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 80, height: 80,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   isSearching ? Icons.search_off : Icons.inventory_2_outlined,
-                  color: AppColors.primary.withValues(alpha: 0.5), size: 40,
+                  color: AppColors.primary.withValues(alpha: 0.5),
+                  size: 40,
                 ),
               ),
               const SizedBox(height: 20),
               Text(
                 isSearching ? 'No Products Found' : 'No Products Yet',
-                style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: context.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                isSearching ? 'Try adjusting your search or filter.' : 'Start by adding your first product.',
-                style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                isSearching
+                    ? 'Try adjusting your search or filter.'
+                    : 'Start by adding your first product.',
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -248,23 +297,38 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 ElevatedButton.icon(
                   onPressed: () => context.push(AppRoutes.addProduct),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add Product'),
+                  label: const Text('Create Product'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-                    elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 )
               else
                 OutlinedButton.icon(
-                  onPressed: () => setState(() { _searchController.clear(); _selectedCategoryId = null; }),
+                  onPressed: () => setState(() {
+                    _searchController.clear();
+                    _selectedCategoryId = null;
+                  }),
                   icon: const Icon(Icons.clear, size: 18),
                   label: const Text('Clear Filters'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
             ],
@@ -280,8 +344,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         final product = products[index];
         return _ProductTile(
           product: product,
-          onTap: () =>
-              context.push('${AppRoutes.productDetail}/${product.id}'),
+          onTap: () => context.push('${AppRoutes.productDetail}/${product.id}'),
         );
       },
     );
@@ -372,16 +435,24 @@ class _ProductTile extends ConsumerWidget {
         title: const Text('Delete Product'),
         content: Text('Delete "${product.name}"? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(productNotifierProvider.notifier).deleteProduct(product.id);
+              await ref
+                  .read(productNotifierProvider.notifier)
+                  .deleteProduct(product.id);
               if (!context.mounted) return;
               final state = ref.read(productNotifierProvider);
               if (state.hasError) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${state.error}'), backgroundColor: AppColors.error),
+                  SnackBar(
+                    content: Text('${state.error}'),
+                    backgroundColor: AppColors.error,
+                  ),
                 );
               } else {
                 ref.invalidate(productsProvider);
@@ -422,7 +493,8 @@ class _ProductTile extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(10),
-                  image: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                  image:
+                      product.imageUrl != null && product.imageUrl!.isNotEmpty
                       ? DecorationImage(
                           image: NetworkImage(
                             product.imageUrl!.startsWith('http')
@@ -435,8 +507,11 @@ class _ProductTile extends ConsumerWidget {
                       : null,
                 ),
                 child: product.imageUrl == null || product.imageUrl!.isEmpty
-                    ? Icon(Icons.inventory_2_outlined,
-                        color: AppColors.onSurfaceVariant, size: 22)
+                    ? Icon(
+                        Icons.inventory_2_outlined,
+                        color: AppColors.onSurfaceVariant,
+                        size: 22,
+                      )
                     : null,
               ),
               const SizedBox(width: 12),
@@ -462,8 +537,6 @@ class _ProductTile extends ConsumerWidget {
                         fontSize: 11,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    _buildStockBadge(context, product),
                   ],
                 ),
               ),
@@ -506,7 +579,7 @@ class _ProductTile extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          'Out of Stock',
+          'Out of stock',
           style: context.textTheme.labelSmall?.copyWith(
             color: const Color(0xFFC62828),
             fontWeight: FontWeight.w600,
@@ -523,7 +596,7 @@ class _ProductTile extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          'Low Stock',
+          'Low stock',
           style: context.textTheme.labelSmall?.copyWith(
             color: const Color(0xFFE65100),
             fontWeight: FontWeight.w600,

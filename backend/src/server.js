@@ -1,4 +1,20 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+const dotenv = require('dotenv');
+
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+if (!process.env.DATABASE_URL) {
+  const rootEnvPath = path.resolve(__dirname, '../../.env');
+  if (fs.existsSync(rootEnvPath)) {
+    const raw = fs.readFileSync(rootEnvPath, 'utf16le');
+    const match = raw.match(/DATABASE_URL=(.+)/);
+    if (match && match[1]) {
+      process.env.DATABASE_URL = match[1].trim();
+    }
+  }
+}
 const fastify = require('fastify');
 const { registerPlugins } = require('./plugins');
 const { registerRoutes } = require('./routes');

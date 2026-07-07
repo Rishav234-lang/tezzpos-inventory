@@ -12,10 +12,12 @@ class SubscriptionManagementScreen extends ConsumerStatefulWidget {
   const SubscriptionManagementScreen({super.key});
 
   @override
-  ConsumerState<SubscriptionManagementScreen> createState() => _SubscriptionManagementScreenState();
+  ConsumerState<SubscriptionManagementScreen> createState() =>
+      _SubscriptionManagementScreenState();
 }
 
-class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManagementScreen> {
+class _SubscriptionManagementScreenState
+    extends ConsumerState<SubscriptionManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final subscriptionAsync = ref.watch(mySubscriptionProvider);
@@ -32,7 +34,9 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
         ),
         title: Text(
           'Subscription',
-          style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: context.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -61,7 +65,9 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
               const SizedBox(height: 24),
               Text(
                 'Payment History',
-                style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: context.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               paymentsAsync.when(
@@ -73,7 +79,9 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
                     );
                   }
                   return Column(
-                    children: payments.map((p) => _buildPaymentTile(p)).toList(),
+                    children: payments
+                        .map((p) => _buildPaymentTile(p))
+                        .toList(),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -92,7 +100,7 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
 
   Widget _buildSubscriptionCard(Map<String, dynamic> subscription) {
     final plan = subscription['plan'] as Map<String, dynamic>?;
-    final status = subscription['status'] as String? ?? 'UNKNOWN';
+    final rawStatus = subscription['status'] as String? ?? 'UNKNOWN';
     final billingCycle = subscription['billingCycle'] as String? ?? 'MONTHLY';
     final autoRenew = subscription['autoRenew'] as bool? ?? false;
     final endDate = subscription['endDate'] != null
@@ -100,6 +108,11 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
         : null;
 
     final isExpired = endDate != null && endDate.isBefore(DateTime.now());
+    final isActive =
+        !isExpired &&
+        rawStatus.toUpperCase() != 'EXPIRED' &&
+        rawStatus.toUpperCase() != 'SUSPENDED';
+    final status = isActive ? 'ACTIVE' : rawStatus;
     final daysLeft = endDate != null && !isExpired
         ? endDate.difference(DateTime.now()).inDays
         : null;
@@ -118,7 +131,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -133,7 +149,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
               ),
               if (autoRenew)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
@@ -141,7 +160,11 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.repeat, size: 14, color: AppColors.successLight),
+                      Icon(
+                        Icons.repeat,
+                        size: 14,
+                        color: AppColors.successLight,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Auto-Pay',
@@ -184,8 +207,8 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
                   isExpired
                       ? 'Expired on ${DateFormat('dd MMM yyyy').format(endDate)}'
                       : daysLeft != null && daysLeft <= 7
-                          ? 'Expires in $daysLeft day${daysLeft == 1 ? '' : 's'}'
-                          : 'Valid until ${DateFormat('dd MMM yyyy').format(endDate)}',
+                      ? 'Expires in $daysLeft day${daysLeft == 1 ? '' : 's'}'
+                      : 'Valid until ${DateFormat('dd MMM yyyy').format(endDate)}',
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: isExpired || (daysLeft != null && daysLeft <= 7)
                         ? AppColors.warningLight
@@ -196,26 +219,40 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
               ],
             ),
           ],
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  label: autoRenew ? 'Cancel Auto-Pay' : 'Enable Auto-Pay',
-                  icon: autoRenew ? Icons.cancel_outlined : Icons.repeat,
-                  isLoading: ref.watch(subscriptionNotifierProvider).isLoading,
-                  onPressed: () => _toggleAutoRenew(!autoRenew),
-                  outlined: autoRenew,
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  size: 20,
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isActive
+                        ? 'Your account status is Active.'
+                        : 'Your subscription is not active. Please contact support.',
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    )
-        .animate()
-        .fadeIn()
-        .slideY(begin: 0.1, end: 0);
+    ).animate().fadeIn().slideY(begin: 0.1, end: 0);
   }
 
   Widget _buildActionButton({
@@ -232,7 +269,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Icon(icon, size: 18),
         label: Text(label),
@@ -240,7 +280,9 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
           foregroundColor: Colors.white,
           side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -250,7 +292,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
             )
           : Icon(icon, size: 18),
       label: Text(label),
@@ -271,12 +316,20 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Cancel Auto-Pay?'),
-          content: const Text('Your subscription will not renew automatically. You will need to renew manually when it expires.'),
+          content: const Text(
+            'Your subscription will not renew automatically. You will need to renew manually when it expires.',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep Auto-Pay')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Keep Auto-Pay'),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.error)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.error),
+              ),
             ),
           ],
         ),
@@ -286,7 +339,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
       if (success && mounted) {
         ref.invalidate(mySubscriptionProvider);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Auto-pay cancelled'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('Auto-pay cancelled'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } else {
@@ -295,7 +351,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
       if (success && mounted) {
         ref.invalidate(mySubscriptionProvider);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Auto-pay enabled'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('Auto-pay enabled'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     }
@@ -323,12 +382,16 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: status == 'SUCCESS' ? AppColors.successLight : AppColors.warningLight,
+              color: status == 'SUCCESS'
+                  ? AppColors.successLight
+                  : AppColors.warningLight,
               shape: BoxShape.circle,
             ),
             child: Icon(
               status == 'SUCCESS' ? Icons.check : Icons.hourglass_empty,
-              color: status == 'SUCCESS' ? AppColors.success : AppColors.warning,
+              color: status == 'SUCCESS'
+                  ? AppColors.success
+                  : AppColors.warning,
               size: 20,
             ),
           ),
@@ -339,17 +402,25 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
               children: [
                 Text(
                   '\u20b9${amount ?? '0.00'}',
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: context.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  paymentDate != null ? DateFormat('dd MMM yyyy, hh:mm a').format(paymentDate) : '-',
-                  style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                  paymentDate != null
+                      ? DateFormat('dd MMM yyyy, hh:mm a').format(paymentDate)
+                      : '-',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
                 if (razorpayId != null)
                   Text(
                     'ID: $razorpayId',
-                    style: context.textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6)),
+                    style: context.textTheme.labelSmall?.copyWith(
+                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
                   ),
               ],
             ),
@@ -357,13 +428,17 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: status == 'SUCCESS' ? AppColors.successLight : AppColors.warningLight,
+              color: status == 'SUCCESS'
+                  ? AppColors.successLight
+                  : AppColors.warningLight,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               status,
               style: context.textTheme.labelSmall?.copyWith(
-                color: status == 'SUCCESS' ? AppColors.success : AppColors.warning,
+                color: status == 'SUCCESS'
+                    ? AppColors.success
+                    : AppColors.warning,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -395,7 +470,9 @@ class _InfoCard extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+              style: context.textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
         ],

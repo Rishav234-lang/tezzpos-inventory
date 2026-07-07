@@ -11,9 +11,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
   DashboardRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<Either<Failure, DashboardStats>> getDashboardStats() async {
+  Future<Either<Failure, DashboardStats>> getDashboardStats({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final result = await _remoteDataSource.getDashboardStats();
+      final result = await _remoteDataSource.getDashboardStats(
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(result);
     } on Failure catch (e) {
       return Left(e);
@@ -23,9 +29,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
   }
 
   @override
-  Future<Either<Failure, List<RecentTransaction>>> getRecentSales() async {
+  Future<Either<Failure, List<RecentTransaction>>> getRecentSales({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final result = await _remoteDataSource.getRecentSales();
+      final result = await _remoteDataSource.getRecentSales(
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(result);
     } on Failure catch (e) {
       return Left(e);
@@ -35,9 +47,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
   }
 
   @override
-  Future<Either<Failure, List<RecentTransaction>>> getRecentPurchases() async {
+  Future<Either<Failure, List<RecentTransaction>>> getRecentPurchases({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final result = await _remoteDataSource.getRecentPurchases();
+      final result = await _remoteDataSource.getRecentPurchases(
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(result);
     } on Failure catch (e) {
       return Left(e);
@@ -47,9 +65,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
   }
 
   @override
-  Future<Either<Failure, List<TopSellingProduct>>> getTopSellingProducts() async {
+  Future<Either<Failure, List<TopSellingProduct>>> getTopSellingProducts({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final result = await _remoteDataSource.getTopSellingProducts();
+      final result = await _remoteDataSource.getTopSellingProducts(
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(result);
     } on Failure catch (e) {
       return Left(e);

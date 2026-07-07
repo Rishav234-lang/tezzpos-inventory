@@ -5,10 +5,22 @@ import '../../../../core/errors/failures.dart';
 import '../models/dashboard_stats_model.dart';
 
 abstract class DashboardRemoteDataSource {
-  Future<DashboardStatsModel> getDashboardStats();
-  Future<List<RecentTransactionModel>> getRecentSales();
-  Future<List<RecentTransactionModel>> getRecentPurchases();
-  Future<List<TopSellingProductModel>> getTopSellingProducts();
+  Future<DashboardStatsModel> getDashboardStats({
+    String? startDate,
+    String? endDate,
+  });
+  Future<List<RecentTransactionModel>> getRecentSales({
+    String? startDate,
+    String? endDate,
+  });
+  Future<List<RecentTransactionModel>> getRecentPurchases({
+    String? startDate,
+    String? endDate,
+  });
+  Future<List<TopSellingProductModel>> getTopSellingProducts({
+    String? startDate,
+    String? endDate,
+  });
   Future<List<ChartDataPointModel>> getDailySalesChart();
   Future<List<ChartDataPointModel>> getDailyPurchasesChart();
 }
@@ -19,9 +31,18 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   DashboardRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<DashboardStatsModel> getDashboardStats() async {
+  Future<DashboardStatsModel> getDashboardStats({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.dashboard);
+      final query = <String, dynamic>{};
+      if (startDate != null) query['startDate'] = startDate;
+      if (endDate != null) query['endDate'] = endDate;
+      final response = await _dio.get(
+        ApiConstants.dashboard,
+        queryParameters: query,
+      );
       return DashboardStatsModel.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -29,9 +50,18 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   }
 
   @override
-  Future<List<RecentTransactionModel>> getRecentSales() async {
+  Future<List<RecentTransactionModel>> getRecentSales({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.recentSales);
+      final query = <String, dynamic>{};
+      if (startDate != null) query['startDate'] = startDate;
+      if (endDate != null) query['endDate'] = endDate;
+      final response = await _dio.get(
+        ApiConstants.recentSales,
+        queryParameters: query,
+      );
       final List data = response.data is List ? response.data : [];
       return data.map((e) => RecentTransactionModel.fromJson(e)).toList();
     } on DioException catch (e) {
@@ -40,9 +70,18 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   }
 
   @override
-  Future<List<RecentTransactionModel>> getRecentPurchases() async {
+  Future<List<RecentTransactionModel>> getRecentPurchases({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.recentPurchases);
+      final query = <String, dynamic>{};
+      if (startDate != null) query['startDate'] = startDate;
+      if (endDate != null) query['endDate'] = endDate;
+      final response = await _dio.get(
+        ApiConstants.recentPurchases,
+        queryParameters: query,
+      );
       final List data = response.data is List ? response.data : [];
       return data.map((e) => RecentTransactionModel.fromJson(e)).toList();
     } on DioException catch (e) {
@@ -51,9 +90,18 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   }
 
   @override
-  Future<List<TopSellingProductModel>> getTopSellingProducts() async {
+  Future<List<TopSellingProductModel>> getTopSellingProducts({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final response = await _dio.get('${ApiConstants.dashboard}/charts/top-products');
+      final query = <String, dynamic>{};
+      if (startDate != null) query['startDate'] = startDate;
+      if (endDate != null) query['endDate'] = endDate;
+      final response = await _dio.get(
+        '${ApiConstants.dashboard}/charts/top-products',
+        queryParameters: query,
+      );
       final List data = response.data is List ? response.data : [];
       return data.map((e) => TopSellingProductModel.fromJson(e)).toList();
     } on DioException catch (e) {
@@ -64,7 +112,9 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   @override
   Future<List<ChartDataPointModel>> getDailySalesChart() async {
     try {
-      final response = await _dio.get('${ApiConstants.dashboard}/charts/daily-sales');
+      final response = await _dio.get(
+        '${ApiConstants.dashboard}/charts/daily-sales',
+      );
       final List data = response.data is List ? response.data : [];
       return data.map((e) => ChartDataPointModel.fromJson(e)).toList();
     } on DioException catch (e) {
@@ -75,7 +125,9 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   @override
   Future<List<ChartDataPointModel>> getDailyPurchasesChart() async {
     try {
-      final response = await _dio.get('${ApiConstants.dashboard}/charts/daily-purchases');
+      final response = await _dio.get(
+        '${ApiConstants.dashboard}/charts/daily-purchases',
+      );
       final List data = response.data is List ? response.data : [];
       return data.map((e) => ChartDataPointModel.fromJson(e)).toList();
     } on DioException catch (e) {

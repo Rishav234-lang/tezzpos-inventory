@@ -13,7 +13,8 @@ class ReceivePaymentScreen extends ConsumerStatefulWidget {
   const ReceivePaymentScreen({super.key, this.customerId});
 
   @override
-  ConsumerState<ReceivePaymentScreen> createState() => _ReceivePaymentScreenState();
+  ConsumerState<ReceivePaymentScreen> createState() =>
+      _ReceivePaymentScreenState();
 }
 
 class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
@@ -47,7 +48,9 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
   @override
   Widget build(BuildContext context) {
     if (hasPreselectedCustomer) {
-      final customerAsync = ref.watch(customerDetailProvider(widget.customerId!));
+      final customerAsync = ref.watch(
+        customerDetailProvider(widget.customerId!),
+      );
       customerAsync.whenData((customer) {
         if (mounted) _setCustomer(customer);
       });
@@ -59,9 +62,13 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
+        surfaceTintColor: AppColors.background,
         elevation: 0,
-        leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back),
+        ),
         title: const Text('Receive Payment'),
       ),
       body: SingleChildScrollView(
@@ -80,30 +87,44 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Pending Amount', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13)),
+                  Text(
+                    'Pending Amount',
+                    style: TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     '₹ ${currency.format(pendingAmount)}',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pendingAmount > 0 ? AppColors.error : const Color(0xFF2E7D32)),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: pendingAmount > 0
+                          ? AppColors.error
+                          : const Color(0xFF2E7D32),
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            _buildLabel('Payment Amount *'),
+            _buildLabel('Amount Received *'),
             const SizedBox(height: 6),
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
-              decoration: _inputDecoration('Enter payment amount'),
+              decoration: _inputDecoration('Enter amount'),
             ),
             const SizedBox(height: 16),
-            _buildLabel('Payment Method *'),
+            _buildLabel('Payment Type *'),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
               decoration: _inputDecoration('Select payment method'),
-              items: _paymentMethods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+              items: _paymentMethods
+                  .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                  .toList(),
               onChanged: (v) => setState(() => _paymentMethod = v!),
             ),
             const SizedBox(height: 16),
@@ -111,10 +132,10 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
             const SizedBox(height: 6),
             TextField(
               controller: _referenceController,
-              decoration: _inputDecoration('Enter reference number'),
+              decoration: _inputDecoration('Optional'),
             ),
             const SizedBox(height: 16),
-            _buildLabel('Payment Date *'),
+            _buildLabel('Date *'),
             const SizedBox(height: 6),
             InkWell(
               onTap: _pickDate,
@@ -129,21 +150,32 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
             TextField(
               controller: _notesController,
               maxLines: 3,
-              decoration: _inputDecoration('Enter notes (optional)'),
+              decoration: _inputDecoration('Optional'),
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _isSaving || _selectedCustomer == null ? null : _save,
+                onPressed: _isSaving || _selectedCustomer == null
+                    ? null
+                    : _save,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: _isSaving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text('Save Payment'),
               ),
             ),
@@ -171,7 +203,9 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
             const SizedBox(height: 6),
             DropdownButtonFormField<Customer>(
               decoration: _inputDecoration('Select customer'),
-              items: customers.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
+              items: customers
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                  .toList(),
               onChanged: (c) => setState(() => _selectedCustomer = c),
               initialValue: _selectedCustomer,
             ),
@@ -195,15 +229,33 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primary,
-            child: Text(customer.initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              customer.initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(customer.mobile ?? '', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13)),
+                Text(
+                  customer.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  customer.mobile ?? '',
+                  style: TextStyle(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
@@ -213,7 +265,14 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
   }
 
   Widget _buildLabel(String label) {
-    return Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface));
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.onSurface,
+      ),
+    );
   }
 
   InputDecoration _inputDecoration(String hint) {
@@ -221,9 +280,18 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
       hintText: hint,
       filled: true,
       fillColor: AppColors.surface,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.primary),
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     );
   }
@@ -240,19 +308,25 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
 
   Future<void> _save() async {
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a customer')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a customer')));
       return;
     }
 
     final amountText = _amountController.text.trim();
     if (amountText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter payment amount')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter payment amount')),
+      );
       return;
     }
 
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid amount')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid amount')),
+      );
       return;
     }
 
@@ -263,7 +337,9 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
       'amount': amount,
       'paymentDate': _paymentDate.toIso8601String(),
       'paymentMethod': _paymentMethod,
-      'notes': _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      'notes': _notesController.text.trim().isNotEmpty
+          ? _notesController.text.trim()
+          : null,
     };
 
     await ref.read(customerNotifierProvider.notifier).receivePayment(data);
@@ -274,14 +350,19 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
     final notifierState = ref.read(customerNotifierProvider);
     if (notifierState.hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${notifierState.error}'), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text('${notifierState.error}'),
+          backgroundColor: AppColors.error,
+        ),
       );
     } else {
       ref.invalidate(customersProvider(CustomerFilter()));
       ref.invalidate(customerLedgerProvider(_selectedCustomer!.id));
       ref.invalidate(customerDetailProvider(_selectedCustomer!.id));
       context.pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment saved')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Payment saved')));
     }
   }
 }

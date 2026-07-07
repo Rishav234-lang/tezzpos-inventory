@@ -37,7 +37,11 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     super.dispose();
   }
 
-  void _showMakePaymentDialog(BuildContext context, WidgetRef ref, Vendor vendor) {
+  void _showMakePaymentDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Vendor vendor,
+  ) {
     final amountController = TextEditingController();
     String selectedMethod = 'CASH';
     final methods = ['CASH', 'BANK_TRANSFER', 'UPI', 'CHEQUE'];
@@ -45,75 +49,119 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Record Payment to ${vendor.name}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                'Record Payment to ${vendor.name}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Amount (₹)',
                   filled: true,
                   fillColor: AppColors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedMethod,
+                initialValue: selectedMethod,
                 decoration: InputDecoration(
                   labelText: 'Payment Method',
                   filled: true,
                   fillColor: AppColors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
-                items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m.replaceAll('_', ' ')))).toList(),
-                onChanged: (v) => setModalState(() => selectedMethod = v ?? 'CASH'),
+                items: methods
+                    .map(
+                      (m) => DropdownMenuItem(
+                        value: m,
+                        child: Text(m.replaceAll('_', ' ')),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) =>
+                    setModalState(() => selectedMethod = v ?? 'CASH'),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () async {
-                    final amount = double.tryParse(amountController.text.trim());
+                    final amount = double.tryParse(
+                      amountController.text.trim(),
+                    );
                     if (amount == null || amount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Enter a valid amount')),
+                      );
                       return;
                     }
                     Navigator.pop(ctx);
-                    await ref.read(purchaseNotifierProvider.notifier).recordPayment({
-                      'vendorId': widget.vendorId,
-                      'amount': amount,
-                      'paymentMethod': selectedMethod,
-                      'paymentDate': DateTime.now().toIso8601String(),
-                    });
+                    await ref
+                        .read(purchaseNotifierProvider.notifier)
+                        .recordPayment({
+                          'vendorId': widget.vendorId,
+                          'amount': amount,
+                          'paymentMethod': selectedMethod,
+                          'paymentDate': DateTime.now().toIso8601String(),
+                        });
                     if (!context.mounted) return;
                     final state = ref.read(purchaseNotifierProvider);
                     if (state.hasError) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${state.error}'), backgroundColor: AppColors.error),
+                        SnackBar(
+                          content: Text('${state.error}'),
+                          backgroundColor: AppColors.error,
+                        ),
                       );
                     } else {
                       ref.invalidate(vendorLedgerProvider(widget.vendorId));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Payment recorded successfully')),
+                        const SnackBar(
+                          content: Text('Payment recorded successfully'),
+                        ),
                       );
                     }
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF2E7D32),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: const Text('Record Payment', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Record Payment',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -156,7 +204,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             onPressed: () => context.pop(),
             icon: const Icon(Icons.arrow_back),
           ),
-          title: const Text('Vendor Details'),
+          title: const Text('Supplier'),
+          backgroundColor: AppColors.background,
+          surfaceTintColor: AppColors.background,
           actions: [
             IconButton(
               onPressed: () => _showOptions(context, ref, vendor),
@@ -172,12 +222,18 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.onSurfaceVariant,
             indicatorColor: AppColors.primary,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w400,
+              fontSize: 13,
+            ),
             tabs: const [
-              Tab(text: 'Overview'),
+              Tab(text: 'Details'),
               Tab(text: 'Purchases'),
-              Tab(text: 'Batches'),
+              Tab(text: 'Stock'),
               Tab(text: 'Payments'),
             ],
           ),
@@ -219,9 +275,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.outline.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -261,7 +315,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: vendor.isActive
                                 ? const Color(0xFFE8F5E9)
@@ -341,9 +398,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.outline.withValues(alpha: 0.15),
-          ),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.15)),
         ),
         child: Row(
           children: [
@@ -388,7 +443,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
   }
 
   Widget _buildSummaryCards(
-      BuildContext context, AsyncValue<Map<String, dynamic>> ledgerAsync) {
+    BuildContext context,
+    AsyncValue<Map<String, dynamic>> ledgerAsync,
+  ) {
     final ledger = ledgerAsync.valueOrNull;
     final totalPurchase = ledger?['totalPurchaseAmount'] ?? 0;
     final totalPaid = ledger?['totalPaidAmount'] ?? 0;
@@ -405,10 +462,12 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             _buildSummaryCard(
               context,
               label: 'Total Purchase',
-              value: fmt.format(totalPurchase is num ? totalPurchase.toDouble() : 0),
+              value: fmt.format(
+                totalPurchase is num ? totalPurchase.toDouble() : 0,
+              ),
               icon: Icons.receipt_outlined,
-              iconBg: const Color(0xFFE3F2FD),
-              iconColor: const Color(0xFF1565C0),
+              iconBg: AppColors.primaryContainer,
+              iconColor: AppColors.primary,
             ),
             const SizedBox(width: 12),
             _buildSummaryCard(
@@ -427,7 +486,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
             _buildSummaryCard(
               context,
               label: 'Outstanding',
-              value: fmt.format(outstanding is num ? outstanding.toDouble() : 0),
+              value: fmt.format(
+                outstanding is num ? outstanding.toDouble() : 0,
+              ),
               icon: Icons.warning_amber_outlined,
               iconBg: const Color(0xFFFFEBEE),
               iconColor: const Color(0xFFC62828),
@@ -447,8 +508,11 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     );
   }
 
-  Widget _buildOverviewTab(BuildContext context, Vendor vendor,
-      AsyncValue<Map<String, dynamic>> ledgerAsync) {
+  Widget _buildOverviewTab(
+    BuildContext context,
+    Vendor vendor,
+    AsyncValue<Map<String, dynamic>> ledgerAsync,
+  ) {
     return ledgerAsync.when(
       data: (ledger) {
         final purchases = (ledger['purchases'] as List<dynamic>?) ?? [];
@@ -519,7 +583,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
   }
 
   Widget _buildPurchasesTab(
-      BuildContext context, AsyncValue<Map<String, dynamic>> ledgerAsync) {
+    BuildContext context,
+    AsyncValue<Map<String, dynamic>> ledgerAsync,
+  ) {
     return ledgerAsync.when(
       data: (ledger) {
         final purchases = (ledger['purchases'] as List<dynamic>?) ?? [];
@@ -545,7 +611,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     );
   }
 
-  Widget _buildPurchaseCard(BuildContext context, Map<String, dynamic> purchase) {
+  Widget _buildPurchaseCard(
+    BuildContext context,
+    Map<String, dynamic> purchase,
+  ) {
     final status = purchase['status'] as String? ?? 'UNPAID';
     final totalVal = _toDouble(purchase['totalAmount']);
     final paidVal = _toDouble(purchase['paidAmount']);
@@ -575,9 +644,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.outline.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,8 +669,11 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.more_vert,
-                      size: 18, color: AppColors.onSurfaceVariant),
+                  const Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ],
               ),
             ],
@@ -619,9 +689,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                child: _buildPurchaseMiniCol('Items', '$items'),
-              ),
+              Expanded(child: _buildPurchaseMiniCol('Items', '$items')),
               Expanded(
                 child: _buildPurchaseMiniCol(
                   'Paid',
@@ -633,7 +701,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                 child: _buildPurchaseMiniCol(
                   'Due',
                   '₹ ${NumberFormat('#,##,##0').format(due)}',
-                  valueColor: due > 0 ? const Color(0xFFC62828) : const Color(0xFF2E7D32),
+                  valueColor: due > 0
+                      ? const Color(0xFFC62828)
+                      : const Color(0xFF2E7D32),
                 ),
               ),
             ],
@@ -662,8 +732,11 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     );
   }
 
-  Widget _buildPurchaseMiniCol(String label, String value,
-      {Color? valueColor}) {
+  Widget _buildPurchaseMiniCol(
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -687,8 +760,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     );
   }
 
-  Widget _buildPurchaseRow(Map<String, dynamic> purchase,
-      {bool showStatus = true}) {
+  Widget _buildPurchaseRow(
+    Map<String, dynamic> purchase, {
+    bool showStatus = true,
+  }) {
     final status = purchase['status'] as String? ?? 'UNPAID';
     final totalVal = _toDouble(purchase['totalAmount']);
     final paidVal = _toDouble(purchase['paidAmount']);
@@ -715,9 +790,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: AppColors.outline.withValues(alpha: 0.1),
-          ),
+          bottom: BorderSide(color: AppColors.outline.withValues(alpha: 0.1)),
         ),
       ),
       child: Row(
@@ -756,7 +829,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
               const SizedBox(height: 2),
               if (showStatus)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -777,8 +853,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     );
   }
 
-  Widget _buildBatchesTab(BuildContext context,
-      AsyncValue<Map<String, dynamic>> ledgerAsync) {
+  Widget _buildBatchesTab(
+    BuildContext context,
+    AsyncValue<Map<String, dynamic>> ledgerAsync,
+  ) {
     return ledgerAsync.when(
       data: (ledger) {
         final purchases = (ledger['purchases'] as List<dynamic>?) ?? [];
@@ -798,7 +876,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
         if (allBatches.isEmpty) {
           return const Center(
             child: Text(
-              'No batches found',
+              'No stock details found',
               style: TextStyle(color: AppColors.onSurfaceVariant),
             ),
           );
@@ -837,9 +915,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.outline.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -886,21 +962,14 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                child: _buildBatchMiniCol('Qty', '$qty'),
-              ),
+              Expanded(child: _buildBatchMiniCol('Qty', '$qty')),
               Expanded(
                 child: _buildBatchMiniCol(
                   'Purchase Price',
                   '₹ ${_formatAmount(price)}',
                 ),
               ),
-              Expanded(
-                child: _buildBatchMiniCol(
-                  'Expiry',
-                  expiryStr,
-                ),
-              ),
+              Expanded(child: _buildBatchMiniCol('Expiry', expiryStr)),
             ],
           ),
         ],
@@ -932,8 +1001,10 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
     );
   }
 
-  Widget _buildPaymentsTab(BuildContext context,
-      AsyncValue<Map<String, dynamic>> ledgerAsync) {
+  Widget _buildPaymentsTab(
+    BuildContext context,
+    AsyncValue<Map<String, dynamic>> ledgerAsync,
+  ) {
     return ledgerAsync.when(
       data: (ledger) {
         final payments = (ledger['payments'] as List<dynamic>?) ?? [];
@@ -992,9 +1063,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.outline.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -1005,11 +1074,7 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
               color: const Color(0xFFE8F5E9),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              methodIcon,
-              color: const Color(0xFF2E7D32),
-              size: 22,
-            ),
+            child: Icon(methodIcon, color: const Color(0xFF2E7D32), size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1059,8 +1124,18 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
 
   String _monthName(int month) {
     const names = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return names[month - 1];
   }
@@ -1074,12 +1149,18 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
   }
 
   String _formatAmount(double amount) {
-    if (amount >= 100000) return '${NumberFormat('#,##,##0.##').format(amount / 100000)}L';
+    if (amount >= 100000) {
+      return '${NumberFormat('#,##,##0.##').format(amount / 100000)}L';
+    }
     if (amount >= 1000) return NumberFormat('#,##,##0').format(amount);
     return amount.toStringAsFixed(0);
   }
 
-  Widget _buildBottomActions(BuildContext context, WidgetRef ref, Vendor vendor) {
+  Widget _buildBottomActions(
+    BuildContext context,
+    WidgetRef ref,
+    Vendor vendor,
+  ) {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -1112,7 +1193,8 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () => _showMakePaymentDialog(context, ref, vendor),
+                    onPressed: () =>
+                        _showMakePaymentDialog(context, ref, vendor),
                     icon: const Icon(Icons.lock_outline, size: 18),
                     label: const Text('Make Payment'),
                     style: FilledButton.styleFrom(
@@ -1132,8 +1214,8 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => context
-                        .push('${AppRoutes.editVendor}/${vendor.id}'),
+                    onPressed: () =>
+                        context.push('${AppRoutes.editVendor}/${vendor.id}'),
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit Vendor'),
                     style: OutlinedButton.styleFrom(
@@ -1268,8 +1350,11 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                         ),
                       );
                     } else {
-                      ref.invalidate(vendorsProvider(
-                          VendorFilter(search: null, page: 1, limit: 20)));
+                      ref.invalidate(
+                        vendorsProvider(
+                          VendorFilter(search: null, page: 1, limit: 20),
+                        ),
+                      );
                       context.pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Vendor deleted')),
@@ -1295,7 +1380,8 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.onSurface,
                     side: BorderSide(
-                        color: AppColors.outline.withValues(alpha: 0.5)),
+                      color: AppColors.outline.withValues(alpha: 0.5),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),

@@ -46,7 +46,9 @@ class ProductDetailScreen extends ConsumerWidget {
             onPressed: () => context.pop(),
             icon: const Icon(Icons.arrow_back),
           ),
-          title: const Text('Product Details'),
+          title: const Text('Product'),
+          backgroundColor: AppColors.background,
+          surfaceTintColor: AppColors.background,
           actions: [
             IconButton(
               onPressed: () => _showOptions(context, ref, product),
@@ -80,7 +82,8 @@ class ProductDetailScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: AppColors.surfaceVariant,
                           borderRadius: BorderRadius.circular(14),
-                          image: product.imageUrl != null &&
+                          image:
+                              product.imageUrl != null &&
                                   product.imageUrl!.isNotEmpty
                               ? DecorationImage(
                                   image: NetworkImage(
@@ -93,7 +96,8 @@ class ProductDetailScreen extends ConsumerWidget {
                                 )
                               : null,
                         ),
-                        child: product.imageUrl == null ||
+                        child:
+                            product.imageUrl == null ||
                                 product.imageUrl!.isEmpty
                             ? Icon(
                                 Icons.inventory_2_outlined,
@@ -116,7 +120,9 @@ class ProductDetailScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: product.isActive
                                     ? const Color(0xFFE8F5E9)
@@ -158,85 +164,126 @@ class ProductDetailScreen extends ConsumerWidget {
                 // Price & stock cards
                 Row(
                   children: [
-                    _buildInfoCard(context, label: 'Cost Price',
-                        value: '₹ ${NumberFormat('#,##,##0.00').format(product.costPrice)}'),
+                    _buildInfoCard(
+                      context,
+                      label: 'Cost Price',
+                      value:
+                          '₹ ${NumberFormat('#,##,##0.00').format(product.costPrice)}',
+                    ),
                     const SizedBox(width: 8),
-                    _buildInfoCard(context, label: 'Selling Price',
-                        value: '₹ ${NumberFormat('#,##,##0.00').format(product.sellingPrice)}', highlight: true),
+                    _buildInfoCard(
+                      context,
+                      label: 'Selling Price',
+                      value:
+                          '₹ ${NumberFormat('#,##,##0.00').format(product.sellingPrice)}',
+                      highlight: true,
+                    ),
                     const SizedBox(width: 8),
-                    _buildInfoCard(context, label: 'MRP',
-                        value: product.firstMrp != null
-                            ? '₹ ${NumberFormat('#,##,##0.00').format(product.firstMrp)}'
-                            : '—'),
+                    _buildInfoCard(
+                      context,
+                      label: 'MRP',
+                      value: product.firstMrp != null
+                          ? '₹ ${NumberFormat('#,##,##0.00').format(product.firstMrp)}'
+                          : '—',
+                    ),
                     const SizedBox(width: 8),
-                    _buildInfoCard(context, label: 'In Stock',
-                        value: '${product.totalStock}',
-                        valueColor: product.isOutOfStock
-                            ? AppColors.error
-                            : product.isLowStock
-                                ? const Color(0xFFE65100)
-                                : const Color(0xFF2E7D32)),
+                    _buildInfoCard(
+                      context,
+                      label: 'In Stock',
+                      value: '${product.totalStock}',
+                      valueColor: product.isOutOfStock
+                          ? AppColors.error
+                          : product.isLowStock
+                          ? const Color(0xFFE65100)
+                          : const Color(0xFF2E7D32),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 // Product Information card
-                _buildSectionTitle('Product Information'),
+                _buildSectionTitle('Product Details'),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                    border: Border.all(
+                      color: AppColors.outline.withValues(alpha: 0.12),
+                    ),
                   ),
                   child: Column(
                     children: [
                       _buildBarcodeRow(context, product.barcode),
                       const Divider(height: 16, thickness: 0.5),
-                      _buildInfoRow('Category', product.categoryName ?? 'Uncategorized'),
+                      _buildInfoRow(
+                        'Category',
+                        product.categoryName ?? 'Uncategorized',
+                      ),
                       const Divider(height: 16, thickness: 0.5),
                       _buildInfoRow('Unit', product.unit),
-                      if (product.hsnCode != null && product.hsnCode!.isNotEmpty) ...[
+                      if (product.hsnCode != null &&
+                          product.hsnCode!.isNotEmpty) ...[
                         const Divider(height: 16, thickness: 0.5),
                         _buildInfoRow('HSN Code', product.hsnCode!),
                       ],
                       const Divider(height: 16, thickness: 0.5),
-                      _buildInfoRow('GST Rate', '${product.gstRate.toStringAsFixed(0)}%'),
-                      if (product.description != null && product.description!.isNotEmpty) ...[
+                      _buildInfoRow(
+                        'GST Rate',
+                        '${product.gstRate.toStringAsFixed(0)}%',
+                      ),
+                      if (product.description != null &&
+                          product.description!.isNotEmpty) ...[
                         const Divider(height: 16, thickness: 0.5),
-                        _buildInfoRow('Description', product.description!, multiLine: true),
+                        _buildInfoRow(
+                          'Description',
+                          product.description!,
+                          multiLine: true,
+                        ),
                       ],
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Inventory card
-                _buildSectionTitle('Inventory'),
+                // Stock card
+                _buildSectionTitle('Stock'),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                    border: Border.all(
+                      color: AppColors.outline.withValues(alpha: 0.12),
+                    ),
                   ),
                   child: Column(
                     children: [
-                      _buildInfoRow('Available Stock', '${product.totalStock}',
-                          valueColor: product.isOutOfStock
-                              ? AppColors.error
-                              : product.isLowStock
-                                  ? const Color(0xFFE65100)
-                                  : const Color(0xFF2E7D32)),
+                      _buildInfoRow(
+                        'Available Stock',
+                        '${product.totalStock}',
+                        valueColor: product.isOutOfStock
+                            ? AppColors.error
+                            : product.isLowStock
+                            ? const Color(0xFFE65100)
+                            : const Color(0xFF2E7D32),
+                      ),
                       const Divider(height: 16, thickness: 0.5),
-                      _buildInfoRow('Reorder Level', '${product.minStockLevel}'),
+                      _buildInfoRow(
+                        'Reorder Level',
+                        '${product.minStockLevel}',
+                      ),
                       const Divider(height: 16, thickness: 0.5),
-                      _buildInfoRow('Stock Value (Cost)',
-                          '₹ ${NumberFormat('#,##,##0.00').format(product.stockValue)}'),
+                      _buildInfoRow(
+                        'Stock Value (Cost)',
+                        '₹ ${NumberFormat('#,##,##0.00').format(product.stockValue)}',
+                      ),
                       if (product.stockValueMrp > 0) ...[
                         const Divider(height: 16, thickness: 0.5),
-                        _buildInfoRow('Stock Value (MRP)',
-                            '₹ ${NumberFormat('#,##,##0.00').format(product.stockValueMrp)}'),
+                        _buildInfoRow(
+                          'Stock Value (MRP)',
+                          '₹ ${NumberFormat('#,##,##0.00').format(product.stockValueMrp)}',
+                        ),
                       ],
                     ],
                   ),
@@ -250,13 +297,21 @@ class ProductDetailScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+                    border: Border.all(
+                      color: AppColors.outline.withValues(alpha: 0.12),
+                    ),
                   ),
                   child: Column(
                     children: [
-                      _buildInfoRow('Created On', dateFormat.format(product.createdAt)),
+                      _buildInfoRow(
+                        'Created On',
+                        dateFormat.format(product.createdAt),
+                      ),
                       const Divider(height: 16, thickness: 0.5),
-                      _buildInfoRow('Last Updated', dateFormat.format(product.updatedAt)),
+                      _buildInfoRow(
+                        'Last Updated',
+                        dateFormat.format(product.updatedAt),
+                      ),
                     ],
                   ),
                 ),
@@ -269,16 +324,25 @@ class ProductDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context,
-      {required String label, required String value, bool highlight = false, Color? valueColor}) {
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required String label,
+    required String value,
+    bool highlight = false,
+    Color? valueColor,
+  }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
-          color: highlight ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
+          color: highlight
+              ? AppColors.primary.withValues(alpha: 0.05)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: highlight ? AppColors.primary.withValues(alpha: 0.25) : AppColors.outline.withValues(alpha: 0.15),
+            color: highlight
+                ? AppColors.primary.withValues(alpha: 0.25)
+                : AppColors.outline.withValues(alpha: 0.15),
           ),
         ),
         child: Column(
@@ -287,7 +351,9 @@ class ProductDetailScreen extends ConsumerWidget {
               value,
               style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: valueColor ?? (highlight ? AppColors.primary : AppColors.onSurface),
+                color:
+                    valueColor ??
+                    (highlight ? AppColors.primary : AppColors.onSurface),
                 fontSize: 13,
               ),
               textAlign: TextAlign.center,
@@ -312,11 +378,23 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget _buildSectionTitle(String title) {
     return Row(
       children: [
-        Container(width: 3, height: 16, decoration: BoxDecoration(
-          color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+        Container(
+          width: 3,
+          height: 16,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
         const SizedBox(width: 8),
-        Text(title, style: const TextStyle(
-          fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: AppColors.onSurface,
+          ),
+        ),
       ],
     );
   }
@@ -326,25 +404,39 @@ class ProductDetailScreen extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Barcode', style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+        const Text(
+          'Barcode',
+          style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+        ),
         GestureDetector(
           onTap: barcode != null
               ? () {
                   Clipboard.setData(ClipboardData(text: barcode));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Barcode copied to clipboard'), duration: Duration(seconds: 1)),
+                    const SnackBar(
+                      content: Text('Barcode copied to clipboard'),
+                      duration: Duration(seconds: 1),
+                    ),
                   );
                 }
               : null,
           child: Row(
             children: [
-              Text(display,
-                  style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+              Text(
+                display,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurface,
+                ),
+              ),
               if (barcode != null) ...[
                 const SizedBox(width: 6),
-                Icon(Icons.content_copy, size: 14,
-                    color: AppColors.primary.withValues(alpha: 0.7)),
+                Icon(
+                  Icons.content_copy,
+                  size: 14,
+                  color: AppColors.primary.withValues(alpha: 0.7),
+                ),
               ],
             ],
           ),
@@ -353,28 +445,48 @@ class ProductDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {Color? valueColor, bool multiLine = false}) {
+  Widget _buildInfoRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    bool multiLine = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: multiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      crossAxisAlignment: multiLine
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(width: 16),
         Flexible(
-          child: Text(value,
-              style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: valueColor ?? AppColors.onSurface),
-              textAlign: TextAlign.end,
-              maxLines: multiLine ? 3 : 1,
-              overflow: TextOverflow.ellipsis),
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? AppColors.onSurface,
+            ),
+            textAlign: TextAlign.end,
+            maxLines: multiLine ? 3 : 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildBottomActions(BuildContext context, WidgetRef ref, Product product) {
+  Widget _buildBottomActions(
+    BuildContext context,
+    WidgetRef ref,
+    Product product,
+  ) {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -388,8 +500,8 @@ class ProductDetailScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => context
-                    .push('${AppRoutes.editProduct}/${product.id}'),
+                onPressed: () =>
+                    context.push('${AppRoutes.editProduct}/${product.id}'),
                 icon: const Icon(Icons.edit, size: 18),
                 label: const Text('Edit Product'),
                 style: OutlinedButton.styleFrom(
@@ -453,7 +565,11 @@ class ProductDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showDeleteConfirm(BuildContext context, WidgetRef ref, Product product) {
+  void _showDeleteConfirm(
+    BuildContext context,
+    WidgetRef ref,
+    Product product,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -548,7 +664,8 @@ class ProductDetailScreen extends ConsumerWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.onSurface,
                     side: BorderSide(
-                        color: AppColors.outline.withValues(alpha: 0.5)),
+                      color: AppColors.outline.withValues(alpha: 0.5),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -584,28 +701,34 @@ class ProductDetailScreen extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                    child: Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                        ))),
+                  child: Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                        ))),
+                  child: Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                        ))),
+                  child: Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),

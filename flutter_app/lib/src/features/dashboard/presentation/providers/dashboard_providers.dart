@@ -6,7 +6,9 @@ import '../../data/repositories/dashboard_repository_impl.dart';
 import '../../domain/entities/dashboard_stats.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 
-final dashboardRemoteDataSourceProvider = Provider<DashboardRemoteDataSource>((ref) {
+final dashboardRemoteDataSourceProvider = Provider<DashboardRemoteDataSource>((
+  ref,
+) {
   return DashboardRemoteDataSourceImpl(ref.watch(dioProvider).dio);
 });
 
@@ -14,47 +16,94 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
   return DashboardRepositoryImpl(ref.watch(dashboardRemoteDataSourceProvider));
 });
 
-final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
-  final repository = ref.watch(dashboardRepositoryProvider);
-  final result = await repository.getDashboardStats();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (stats) => stats,
-  );
-});
+class DashboardDateFilter {
+  final DateTime? startDate;
+  final DateTime? endDate;
 
-final recentSalesProvider = FutureProvider<List<RecentTransaction>>((ref) async {
-  final repository = ref.watch(dashboardRepositoryProvider);
-  final result = await repository.getRecentSales();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (transactions) => transactions,
-  );
-});
+  const DashboardDateFilter({this.startDate, this.endDate});
 
-final recentPurchasesProvider = FutureProvider<List<RecentTransaction>>((ref) async {
-  final repository = ref.watch(dashboardRepositoryProvider);
-  final result = await repository.getRecentPurchases();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (transactions) => transactions,
-  );
-});
+  String? get startDateIso => startDate?.toIso8601String();
+  String? get endDateIso => endDate?.toIso8601String();
 
-final topSellingProductsProvider = FutureProvider<List<TopSellingProduct>>((ref) async {
-  final repository = ref.watch(dashboardRepositoryProvider);
-  final result = await repository.getTopSellingProducts();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (products) => products,
-  );
-});
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DashboardDateFilter &&
+          other.startDate == startDate &&
+          other.endDate == endDate;
 
-final dailySalesChartProvider = FutureProvider<List<ChartDataPoint>>((ref) async {
+  @override
+  int get hashCode => Object.hash(startDate, endDate);
+}
+
+final dashboardStatsProvider =
+    FutureProvider.family<DashboardStats, DashboardDateFilter>((
+      ref,
+      filter,
+    ) async {
+      final repository = ref.watch(dashboardRepositoryProvider);
+      final result = await repository.getDashboardStats(
+        startDate: filter.startDateIso,
+        endDate: filter.endDateIso,
+      );
+      return result.fold(
+        (failure) => throw Exception(failure.message),
+        (stats) => stats,
+      );
+    });
+
+final recentSalesProvider =
+    FutureProvider.family<List<RecentTransaction>, DashboardDateFilter>((
+      ref,
+      filter,
+    ) async {
+      final repository = ref.watch(dashboardRepositoryProvider);
+      final result = await repository.getRecentSales(
+        startDate: filter.startDateIso,
+        endDate: filter.endDateIso,
+      );
+      return result.fold(
+        (failure) => throw Exception(failure.message),
+        (transactions) => transactions,
+      );
+    });
+
+final recentPurchasesProvider =
+    FutureProvider.family<List<RecentTransaction>, DashboardDateFilter>((
+      ref,
+      filter,
+    ) async {
+      final repository = ref.watch(dashboardRepositoryProvider);
+      final result = await repository.getRecentPurchases(
+        startDate: filter.startDateIso,
+        endDate: filter.endDateIso,
+      );
+      return result.fold(
+        (failure) => throw Exception(failure.message),
+        (transactions) => transactions,
+      );
+    });
+
+final topSellingProductsProvider =
+    FutureProvider.family<List<TopSellingProduct>, DashboardDateFilter>((
+      ref,
+      filter,
+    ) async {
+      final repository = ref.watch(dashboardRepositoryProvider);
+      final result = await repository.getTopSellingProducts(
+        startDate: filter.startDateIso,
+        endDate: filter.endDateIso,
+      );
+      return result.fold(
+        (failure) => throw Exception(failure.message),
+        (products) => products,
+      );
+    });
+
+final dailySalesChartProvider = FutureProvider<List<ChartDataPoint>>((
+  ref,
+) async {
   final repository = ref.watch(dashboardRepositoryProvider);
   final result = await repository.getDailySalesChart();
-  return result.fold(
-    (failure) => [],
-    (data) => data,
-  );
+  return result.fold((failure) => [], (data) => data);
 });

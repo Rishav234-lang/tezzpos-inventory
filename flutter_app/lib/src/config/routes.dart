@@ -14,6 +14,8 @@ import '../features/category/presentation/screens/add_edit_category_screen.dart'
 import '../features/category/presentation/screens/categories_screen.dart';
 import '../features/category/presentation/screens/category_detail_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/simple_flow/presentation/screens/simple_inventory_flow_screen.dart';
 import '../features/product/presentation/screens/add_edit_product_screen.dart';
 import '../features/product/presentation/screens/product_detail_screen.dart';
 import '../features/product/presentation/screens/products_screen.dart';
@@ -74,8 +76,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.companyRegister ||
           state.matchedLocation == AppRoutes.superAdminLogin ||
           state.matchedLocation == AppRoutes.forgotPassword;
-      final isSubscriptionExpiredRoute = state.matchedLocation == AppRoutes.subscriptionExpired;
-      final isSubscriptionManagementRoute = state.matchedLocation == AppRoutes.subscriptionManagement;
+      final isSubscriptionExpiredRoute =
+          state.matchedLocation == AppRoutes.subscriptionExpired;
+      final isSubscriptionManagementRoute =
+          state.matchedLocation == AppRoutes.subscriptionManagement;
 
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
       final isSuperAdmin = authState.valueOrNull?.user?.isSuperAdmin ?? false;
@@ -95,16 +99,23 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       bool isSubscriptionExpired = false;
       if (isOwner && subscriptionStatus != null) {
-        if (subscriptionStatus == 'EXPIRED' || subscriptionStatus == 'SUSPENDED') {
+        if (subscriptionStatus == 'EXPIRED' ||
+            subscriptionStatus == 'SUSPENDED') {
           isSubscriptionExpired = true;
-        } else if (subscriptionEndDate != null && subscriptionEndDate.isBefore(DateTime.now())) {
+        } else if (subscriptionEndDate != null &&
+            subscriptionEndDate.isBefore(DateTime.now())) {
           isSubscriptionExpired = true;
         }
       }
 
       // Block expired subscriptions from non-allowed routes
-      if (isAuthenticated && isSubscriptionExpired &&
-          !isSubscriptionExpiredRoute && !isSubscriptionManagementRoute && !isAuthRoute && !isSplash && !isOnboarding) {
+      if (isAuthenticated &&
+          isSubscriptionExpired &&
+          !isSubscriptionExpiredRoute &&
+          !isSubscriptionManagementRoute &&
+          !isAuthRoute &&
+          !isSplash &&
+          !isOnboarding) {
         return AppRoutes.subscriptionExpired;
       }
 
@@ -112,7 +123,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If subscription is expired, allow them to stay on auth routes (logout/register)
       if (isAuthenticated && (isAuthRoute || isSplash || isOnboarding)) {
         if (!isSubscriptionExpired) {
-          return isSuperAdmin ? AppRoutes.superAdminDashboard : AppRoutes.dashboard;
+          return isSuperAdmin
+              ? AppRoutes.superAdminDashboard
+              : AppRoutes.dashboard;
         }
         return null;
       }
@@ -128,7 +141,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Role-based access control
-      final isSuperAdminRoute = state.matchedLocation.startsWith('/super-admin');
+      final isSuperAdminRoute = state.matchedLocation.startsWith(
+        '/super-admin',
+      );
       if (isAuthenticated && isSuperAdmin && !isSuperAdminRoute) {
         return AppRoutes.superAdminDashboard;
       }
@@ -178,6 +193,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.dashboard,
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.detailedDashboard,
+        builder: (context, state) => const DashboardScreen(detailed: true),
+      ),
+      GoRoute(
+        path: AppRoutes.simpleFlow,
+        builder: (context, state) => SimpleInventoryFlowScreen(
+          initialMode: state.uri.queryParameters['mode'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.superAdminDashboard,

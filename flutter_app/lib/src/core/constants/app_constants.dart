@@ -9,6 +9,9 @@ class AppRoutes {
   static const String subscriptionExpired = '/subscription-expired';
   static const String subscriptionManagement = '/subscription-management';
   static const String dashboard = '/dashboard';
+  static const String detailedDashboard = '/dashboard/details';
+  static const String profile = '/profile';
+  static const String simpleFlow = '/simple-flow';
   static const String categories = '/categories';
   static const String categoryDetail = '/categories/detail';
   static const String addCategory = '/categories/add';

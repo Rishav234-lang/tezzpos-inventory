@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/extensions.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customer_providers.dart';
 
@@ -12,7 +13,8 @@ class AddEditCustomerScreen extends ConsumerStatefulWidget {
   const AddEditCustomerScreen({super.key, this.customerId});
 
   @override
-  ConsumerState<AddEditCustomerScreen> createState() => _AddEditCustomerScreenState();
+  ConsumerState<AddEditCustomerScreen> createState() =>
+      _AddEditCustomerScreenState();
 }
 
 class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
@@ -51,7 +53,9 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
   @override
   Widget build(BuildContext context) {
     if (isEdit) {
-      final customerAsync = ref.watch(customerDetailProvider(widget.customerId!));
+      final customerAsync = ref.watch(
+        customerDetailProvider(widget.customerId!),
+      );
       customerAsync.whenData((customer) {
         if (mounted) _setControllersFromCustomer(customer);
       });
@@ -60,8 +64,9 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(isEdit ? 'Edit Customer' : 'Add Customer'),
-        backgroundColor: AppColors.surface,
+        title: Text(isEdit ? 'Edit Customer' : 'Create Customer'),
+        backgroundColor: AppColors.background,
+        surfaceTintColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
@@ -69,90 +74,35 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildAvatarArea(context),
-            const SizedBox(height: 24),
-            _buildLabel('Customer Name', required: true),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _nameController,
-              decoration: _inputDecoration('Enter customer name'),
-            ),
+            _buildHeroCard(),
             const SizedBox(height: 16),
-            _buildLabel('Mobile Number'),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _mobileController,
-              keyboardType: TextInputType.phone,
-              decoration: _inputDecoration('Enter mobile number'),
-            ),
-            const SizedBox(height: 16),
-            Row(
+            _buildFormCard(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLabel('GST Number'),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _gstController,
-                        decoration: _inputDecoration('Enter GST number'),
-                      ),
-                    ],
+                _buildField(
+                  label: 'Customer Name',
+                  required: true,
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: _inputDecoration('Example: Ramesh Kumar'),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLabel('Email'),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: _inputDecoration('Enter email address'),
-                      ),
-                    ],
+                const SizedBox(height: 18),
+                _buildField(
+                  label: 'Mobile Number',
+                  child: TextField(
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    decoration: _inputDecoration('Optional'),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _buildLabel('Address'),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _addressController,
-              maxLines: 3,
-              decoration: _inputDecoration('Enter complete address'),
-            ),
-            const SizedBox(height: 16),
-            if (isEdit) ...[
-              _buildLabel('Status'),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _isActive = true),
-                      child: _buildStatusChip('Active', _isActive),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _isActive = false),
-                      child: _buildStatusChip('Inactive', !_isActive),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+            const SizedBox(height: 14),
+            _buildMoreDetails(),
+            const SizedBox(height: 22),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -160,87 +110,238 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 17),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 child: _isSaving
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(isEdit ? 'Update Customer' : 'Save Customer'),
+                    : Text(
+                        isEdit ? 'Update Customer' : 'Create Customer',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAvatarArea(BuildContext context) {
-    final initials = _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'C';
-    return Center(
-      child: Container(
-        width: 90,
-        height: 90,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: CircleAvatar(
-          radius: 40,
-          backgroundColor: AppColors.primary,
-          child: Text(
-            initials,
-            style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String label, bool isActive) {
+  Widget _buildHeroCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFE3F2FD) : AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isActive ? AppColors.primary : AppColors.outline.withValues(alpha: 0.3),
-        ),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(Icons.person_outline, color: AppColors.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Simple customer setup',
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Name is enough. Mobile and address can be added later.',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (isActive) ...[
-            const SizedBox(width: 6),
-            Icon(Icons.check_circle, size: 16, color: AppColors.primary),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildLabel(String label, {bool required = false}) {
+  Widget _buildFormCard({required List<Widget> children}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildMoreDetails() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Icon(Icons.tune, color: AppColors.primary),
+          title: const Text(
+            'More details',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          subtitle: const Text('Optional email, GST, address and status'),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildField(
+                    label: 'GST Number',
+                    child: TextField(
+                      controller: _gstController,
+                      decoration: _inputDecoration('Optional'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildField(
+                    label: 'Email',
+                    child: TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _inputDecoration('Optional'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _buildField(
+              label: 'Address',
+              child: TextField(
+                controller: _addressController,
+                maxLines: 3,
+                decoration: _inputDecoration('Optional'),
+              ),
+            ),
+            if (isEdit) ...[
+              const SizedBox(height: 18),
+              _buildField(label: 'Status', child: _buildStatusToggle()),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required String label,
+    required Widget child,
+    bool required = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: context.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (required)
+              const Text(
+                ' *',
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildStatusToggle() {
     return Row(
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _isActive = true),
+            child: _buildStatusChip('Active', _isActive),
+          ),
         ),
-        if (required)
-          const Text(' *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _isActive = false),
+            child: _buildStatusChip('Inactive', !_isActive),
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildStatusChip(String label, bool isActive) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.primary.withValues(alpha: 0.1) : null,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isActive
+              ? AppColors.primary
+              : AppColors.outline.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 
@@ -248,20 +349,31 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
     return InputDecoration(
       hintText: hint,
       filled: true,
-      fillColor: AppColors.surface,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      fillColor: AppColors.background,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(
+          color: AppColors.outline.withValues(alpha: 0.16),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(
+          color: AppColors.outline.withValues(alpha: 0.16),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: AppColors.primary),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
     );
   }
 
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter customer name')),
-      );
+      _showSnack('Please enter customer name');
       return;
     }
 
@@ -269,34 +381,49 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
 
     final data = {
       'name': name,
-      'mobile': _mobileController.text.trim().isNotEmpty ? _mobileController.text.trim() : null,
-      'gstNumber': _gstController.text.trim().isNotEmpty ? _gstController.text.trim() : null,
-      'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-      'address': _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
+      'mobile': _mobileController.text.trim().isNotEmpty
+          ? _mobileController.text.trim()
+          : null,
+      'gstNumber': _gstController.text.trim().isNotEmpty
+          ? _gstController.text.trim()
+          : null,
+      'email': _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : null,
+      'address': _addressController.text.trim().isNotEmpty
+          ? _addressController.text.trim()
+          : null,
       if (isEdit) 'status': _isActive ? 'ACTIVE' : 'INACTIVE',
     };
 
     if (isEdit) {
-      await ref.read(customerNotifierProvider.notifier).updateCustomer(widget.customerId!, data);
+      await ref
+          .read(customerNotifierProvider.notifier)
+          .updateCustomer(widget.customerId!, data);
     } else {
       await ref.read(customerNotifierProvider.notifier).createCustomer(data);
     }
 
     if (!mounted) return;
-    setState(() => _isSaving = false);
-
     final notifierState = ref.read(customerNotifierProvider);
     if (notifierState.hasError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${notifierState.error}'), backgroundColor: AppColors.error),
-      );
-    } else {
-      ref.invalidate(customersProvider(CustomerFilter()));
-      if (isEdit) ref.invalidate(customerDetailProvider(widget.customerId!));
-      context.pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isEdit ? 'Customer updated' : 'Customer created')),
-      );
+      setState(() => _isSaving = false);
+      _showSnack('${notifierState.error}', isError: true);
+      return;
     }
+
+    ref.invalidate(customersProvider(CustomerFilter()));
+    if (isEdit) ref.invalidate(customerDetailProvider(widget.customerId!));
+    context.pop();
+    _showSnack(isEdit ? 'Customer updated' : 'Customer created');
+  }
+
+  void _showSnack(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? AppColors.error : null,
+      ),
+    );
   }
 }

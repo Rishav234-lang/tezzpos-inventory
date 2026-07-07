@@ -20,6 +20,8 @@ async function purchaseRoutes(fastify) {
       else if (data.paidAmount > 0) status = 'PARTIAL';
 
       const result = await fastify.prisma.$transaction(async (tx) => {
+        const existingBatchCount = await tx.batch.count({ where: { companyId } });
+
         // Create purchase
         const purchase = await tx.purchase.create({
           data: {
@@ -36,7 +38,7 @@ async function purchaseRoutes(fastify) {
         });
 
         // Create purchase items and batches
-        for (const item of data.items) {
+        for (const [index, item] of data.items.entries()) {
           const itemTotal = item.quantity * item.purchasePrice;
 
           await tx.purchaseItem.create({
@@ -58,8 +60,7 @@ async function purchaseRoutes(fastify) {
           });
 
           // Auto create batch
-          const batchCount = await tx.batch.count({ where: { companyId } });
-          const batchNumber = `B${String(batchCount + 1).padStart(6, '0')}`;
+          const batchNumber = `B${String(existingBatchCount + index + 1).padStart(6, '0')}`;
 
           await tx.batch.create({
             data: {
@@ -86,6 +87,8 @@ async function purchaseRoutes(fastify) {
             items: { include: { product: { select: { id: true, name: true } } } },
           },
         });
+      }, {
+        timeout: 15000,
       });
 
       return reply.status(201).send(convertPrismaToJson(result));

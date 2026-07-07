@@ -1,10 +1,16 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const hasRazorpayConfig =
+  Boolean(process.env.RAZORPAY_KEY_ID) &&
+  Boolean(process.env.RAZORPAY_KEY_SECRET);
+
+const razorpay = hasRazorpayConfig
+  ? new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  : null;
 
 /**
  * Verify Razorpay webhook signature.
@@ -24,6 +30,7 @@ const verifyWebhookSignature = (rawBody, signature) => {
  * razorpay_order_id + '|' + razorpay_payment_id signed with key_secret.
  */
 const verifyPaymentSignature = ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
+  if (!process.env.RAZORPAY_KEY_SECRET) return false;
   const body = `${razorpay_order_id}|${razorpay_payment_id}`;
   const expected = crypto
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -32,4 +39,9 @@ const verifyPaymentSignature = ({ razorpay_order_id, razorpay_payment_id, razorp
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(razorpay_signature));
 };
 
-module.exports = { razorpay, verifyWebhookSignature, verifyPaymentSignature };
+module.exports = {
+  razorpay,
+  hasRazorpayConfig,
+  verifyWebhookSignature,
+  verifyPaymentSignature,
+};

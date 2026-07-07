@@ -16,7 +16,8 @@ class AddEditCategoryScreen extends ConsumerStatefulWidget {
   const AddEditCategoryScreen({super.key, this.categoryId});
 
   @override
-  ConsumerState<AddEditCategoryScreen> createState() => _AddEditCategoryScreenState();
+  ConsumerState<AddEditCategoryScreen> createState() =>
+      _AddEditCategoryScreenState();
 }
 
 class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
@@ -50,7 +51,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     if (isEdit) {
-      final categoryAsync = ref.watch(categoryDetailProvider(widget.categoryId!));
+      final categoryAsync = ref.watch(
+        categoryDetailProvider(widget.categoryId!),
+      );
       categoryAsync.whenData(_setControllersFromCategory);
     }
 
@@ -60,12 +63,13 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
+        surfaceTintColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: Text(isEdit ? 'Edit Category' : 'Add Category'),
+        title: Text(isEdit ? 'Edit Category' : 'Create Category'),
         centerTitle: true,
       ),
       body: isLoading
@@ -77,6 +81,13 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                 children: [
                   _buildImageArea(context),
                   const SizedBox(height: 24),
+                  _buildSimpleHeader(
+                    icon: Icons.category_outlined,
+                    title: 'Category Details',
+                    subtitle:
+                        'Use a clear group name like Grocery, Medicine or Snacks.',
+                  ),
+                  const SizedBox(height: 18),
                   _buildLabel('Category Name', required: true),
                   const SizedBox(height: 6),
                   TextField(
@@ -84,33 +95,36 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     decoration: _inputDecoration('Enter category name'),
                   ),
                   const SizedBox(height: 20),
-                  _buildLabel('Description'),
+                  _buildLabel('Note'),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _descriptionController,
                     maxLines: 3,
                     maxLength: 200,
-                    decoration: _inputDecoration('Enter description (optional)'),
+                    decoration: _inputDecoration('Optional'),
                   ),
                   const SizedBox(height: 20),
-                  _buildLabel('Status', required: true),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _StatusChip(
-                        label: 'Active',
-                        isSelected: _status == 'ACTIVE',
-                        onTap: () => setState(() => _status = 'ACTIVE'),
-                      ),
-                      const SizedBox(width: 12),
-                      _StatusChip(
-                        label: 'Inactive',
-                        isSelected: _status == 'INACTIVE',
-                        onTap: () => setState(() => _status = 'INACTIVE'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
+                  if (isEdit) ...[
+                    _buildLabel('Status', required: true),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _StatusChip(
+                          label: 'Active',
+                          isSelected: _status == 'ACTIVE',
+                          onTap: () => setState(() => _status = 'ACTIVE'),
+                        ),
+                        const SizedBox(width: 12),
+                        _StatusChip(
+                          label: 'Inactive',
+                          isSelected: _status == 'INACTIVE',
+                          onTap: () => setState(() => _status = 'INACTIVE'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                  ] else
+                    const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -123,7 +137,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                        disabledBackgroundColor: AppColors.primary.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                       child: _isSaving
                           ? const SizedBox(
@@ -135,8 +151,11 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                               ),
                             )
                           : Text(
-                              isEdit ? 'Update Category' : 'Save Category',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                              isEdit ? 'Update Category' : 'Create Category',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
                             ),
                     ),
                   ),
@@ -155,7 +174,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
     if (hasPickedFile) {
       imageProvider = FileImage(_pickedImageFile!);
     } else if (hasImageUrl) {
-      final url = _imageUrl.startsWith('http') ? _imageUrl : '${ApiConstants.baseUrl}$_imageUrl';
+      final url = _imageUrl.startsWith('http')
+          ? _imageUrl
+          : '${ApiConstants.baseUrl}$_imageUrl';
       imageProvider = NetworkImage(url);
     }
 
@@ -201,14 +222,14 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'Upload Image',
+                          'Category Photo',
                           style: context.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Tap to pick from gallery',
+                          'Optional',
                           style: context.textTheme.labelSmall?.copyWith(
                             color: AppColors.onSurfaceVariant,
                             fontSize: 10,
@@ -235,13 +256,67 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, maxHeight: 1200, imageQuality: 85);
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      imageQuality: 85,
+    );
     if (picked != null) {
       setState(() {
         _pickedImageFile = File(picked.path);
         _imageUrl = '';
       });
     }
+  }
+
+  Widget _buildSimpleHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildLabel(String text, {bool required = false}) {
@@ -266,19 +341,21 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.5)),
+      hintStyle: TextStyle(
+        color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+      ),
       filled: true,
       fillColor: AppColors.surface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AppColors.outline.withValues(alpha: 0.3)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AppColors.outline.withValues(alpha: 0.3)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AppColors.primary),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -298,7 +375,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
 
     String? imagePath;
     if (_pickedImageFile != null) {
-      imagePath = await ref.read(categoryNotifierProvider.notifier).uploadCategoryImage(_pickedImageFile!);
+      imagePath = await ref
+          .read(categoryNotifierProvider.notifier)
+          .uploadCategoryImage(_pickedImageFile!);
       if (imagePath == null) {
         if (!mounted) return;
         final notifierState = ref.read(categoryNotifierProvider);
@@ -320,20 +399,24 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
     final description = _descriptionController.text.trim();
 
     if (isEdit) {
-      await ref.read(categoryNotifierProvider.notifier).updateCategory(
-        id: widget.categoryId!,
-        name: name,
-        description: description.isNotEmpty ? description : null,
-        imageUrl: imagePath,
-        status: _status,
-      );
+      await ref
+          .read(categoryNotifierProvider.notifier)
+          .updateCategory(
+            id: widget.categoryId!,
+            name: name,
+            description: description.isNotEmpty ? description : null,
+            imageUrl: imagePath,
+            status: _status,
+          );
     } else {
-      await ref.read(categoryNotifierProvider.notifier).createCategory(
-        name: name,
-        description: description.isNotEmpty ? description : null,
-        imageUrl: imagePath,
-        status: _status,
-      );
+      await ref
+          .read(categoryNotifierProvider.notifier)
+          .createCategory(
+            name: name,
+            description: description.isNotEmpty ? description : null,
+            imageUrl: imagePath,
+            status: _status,
+          );
     }
 
     if (!mounted) return;
@@ -351,7 +434,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       ref.invalidate(categoriesProvider(''));
       if (isEdit) ref.invalidate(categoryDetailProvider(widget.categoryId!));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isEdit ? 'Category updated' : 'Category created')),
+        SnackBar(
+          content: Text(isEdit ? 'Category updated' : 'Category created'),
+        ),
       );
       context.pop();
     }
@@ -363,7 +448,11 @@ class _StatusChip extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _StatusChip({required this.label, required this.isSelected, required this.onTap});
+  const _StatusChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -373,10 +462,14 @@ class _StatusChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.outline.withValues(alpha: 0.3),
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.outline.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -388,7 +481,9 @@ class _StatusChip extends StatelessWidget {
             Text(
               label,
               style: context.textTheme.bodyMedium?.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

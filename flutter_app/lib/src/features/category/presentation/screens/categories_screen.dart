@@ -38,7 +38,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         onPressed: () => context.push(AppRoutes.addCategory),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Category', style: TextStyle(color: Colors.white)),
+        label: const Text(
+          'Create Category',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
       ),
       body: CustomScrollView(
         slivers: [
@@ -52,11 +55,27 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 padding: const EdgeInsets.all(32),
                 child: Column(
                   children: [
-                    const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.error,
+                      size: 48,
+                    ),
                     const SizedBox(height: 12),
-                    Text('Failed to load categories', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Failed to load categories',
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('$error', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
+                    Text(
+                      '$error',
+                      style: TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -68,11 +87,16 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context, AsyncValue<List<Category>> categoriesAsync) {
+  Widget _buildSliverAppBar(
+    BuildContext context,
+    AsyncValue<List<Category>> categoriesAsync,
+  ) {
     final count = categoriesAsync.valueOrNull?.length ?? 0;
-    final filteredCount = categoriesAsync.valueOrNull != null ? _applyStatusFilter(categoriesAsync.valueOrNull!).length : 0;
+    final filteredCount = categoriesAsync.valueOrNull != null
+        ? _applyStatusFilter(categoriesAsync.valueOrNull!).length
+        : 0;
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: 112,
       pinned: true,
       backgroundColor: AppColors.primary,
       leading: IconButton(
@@ -93,7 +117,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+          decoration: const BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
@@ -132,13 +162,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.outline.withValues(alpha: 0.25)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -146,18 +176,30 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
           decoration: InputDecoration(
-            hintText: 'Search categories...',
-            hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6)),
-            prefixIcon: Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 20),
+            hintText: 'Search category...',
+            hintStyle: TextStyle(
+              color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+            prefixIcon: Icon(
+              Icons.search,
+              color: AppColors.onSurfaceVariant,
+              size: 20,
+            ),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear, size: 18),
                     color: AppColors.onSurfaceVariant,
-                    onPressed: () => setState(() { _searchController.clear(); _searchQuery = ''; }),
+                    onPressed: () => setState(() {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }),
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 13,
+            ),
           ),
         ),
       ),
@@ -171,14 +213,17 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         baseColor: AppColors.surfaceVariant,
         highlightColor: AppColors.surface,
         child: Column(
-          children: List.generate(6, (_) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
+          children: List.generate(
+            6,
+            (_) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
-          )),
+          ),
         ),
       ),
     );
@@ -187,7 +232,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   void _showFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -199,10 +246,18 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Filter by Status', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Filter by Status',
+                      style: context.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     if (_statusFilter != 'All')
                       TextButton(
-                        onPressed: () { Navigator.pop(ctx); setState(() => _statusFilter = 'All'); },
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          setState(() => _statusFilter = 'All');
+                        },
                         child: const Text('Clear'),
                       ),
                   ],
@@ -211,8 +266,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               for (final option in ['All', 'Active', 'Inactive'])
                 ListTile(
                   title: Text(option),
-                  trailing: _statusFilter == option ? const Icon(Icons.check, color: AppColors.primary) : null,
-                  onTap: () { Navigator.pop(ctx); setState(() => _statusFilter = option); },
+                  trailing: _statusFilter == option
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _statusFilter = option);
+                  },
                 ),
             ],
           ),
@@ -222,8 +282,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   }
 
   List<Category> _applyStatusFilter(List<Category> cats) {
-    if (_statusFilter == 'Active') return cats.where((c) => c.isActive).toList();
-    if (_statusFilter == 'Inactive') return cats.where((c) => !c.isActive).toList();
+    if (_statusFilter == 'Active') {
+      return cats.where((c) => c.isActive).toList();
+    }
+    if (_statusFilter == 'Inactive') {
+      return cats.where((c) => !c.isActive).toList();
+    }
     return cats;
   }
 
@@ -246,7 +310,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isFiltered ? Icons.filter_list_off : Icons.category_outlined,
+                    isFiltered
+                        ? Icons.filter_list_off
+                        : Icons.category_outlined,
                     color: AppColors.primary.withValues(alpha: 0.5),
                     size: 40,
                   ),
@@ -274,25 +340,39 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   ElevatedButton.icon(
                     onPressed: () => context.push(AppRoutes.addCategory),
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Category'),
+                    label: const Text('Create Category'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   )
                 else
                   OutlinedButton.icon(
-                    onPressed: () => setState(() { _statusFilter = 'All'; _searchController.clear(); _searchQuery = ''; }),
+                    onPressed: () => setState(() {
+                      _statusFilter = 'All';
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }),
                     icon: const Icon(Icons.clear, size: 18),
                     label: const Text('Clear Filters'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
               ],
@@ -303,16 +383,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     }
 
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final category = filtered[index];
-          return _CategoryTile(
-            category: category,
-            onTap: () => context.push('${AppRoutes.categoryDetail}/${category.id}'),
-          );
-        },
-        childCount: filtered.length,
-      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final category = filtered[index];
+        return _CategoryTile(
+          category: category,
+          onTap: () =>
+              context.push('${AppRoutes.categoryDetail}/${category.id}'),
+        );
+      }, childCount: filtered.length),
     );
   }
 }
@@ -340,7 +418,9 @@ class _CategoryTile extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.outline.withValues(alpha: 0.12)),
+              border: Border.all(
+                color: AppColors.outline.withValues(alpha: 0.12),
+              ),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
@@ -356,7 +436,9 @@ class _CategoryTile extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: bgColor,
                       borderRadius: BorderRadius.circular(12),
-                      image: category.imageUrl != null && category.imageUrl!.isNotEmpty
+                      image:
+                          category.imageUrl != null &&
+                              category.imageUrl!.isNotEmpty
                           ? DecorationImage(
                               image: NetworkImage(
                                 category.imageUrl!.startsWith('http')
@@ -368,8 +450,13 @@ class _CategoryTile extends ConsumerWidget {
                             )
                           : null,
                     ),
-                    child: category.imageUrl == null || category.imageUrl!.isEmpty
-                        ? Icon(_categoryIcon(category.name), color: iconColor, size: 22)
+                    child:
+                        category.imageUrl == null || category.imageUrl!.isEmpty
+                        ? Icon(
+                            _categoryIcon(category.name),
+                            color: iconColor,
+                            size: 22,
+                          )
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -385,15 +472,22 @@ class _CategoryTile extends ConsumerWidget {
                               Expanded(
                                 child: Text(
                                   category.name,
-                                  style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                                  style: context.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               // Status badge
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isActive ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                                  color: isActive
+                                      ? const Color(0xFFE8F5E9)
+                                      : const Color(0xFFFFEBEE),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
@@ -401,7 +495,9 @@ class _CategoryTile extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                                    color: isActive
+                                        ? const Color(0xFF2E7D32)
+                                        : const Color(0xFFC62828),
                                   ),
                                 ),
                               ),
@@ -409,8 +505,12 @@ class _CategoryTile extends ConsumerWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            category.itemCount == 0 ? 'No items' : '${category.itemCount} item${category.itemCount == 1 ? '' : 's'}',
-                            style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                            category.itemCount == 0
+                                ? 'No items'
+                                : '${category.itemCount} item${category.itemCount == 1 ? '' : 's'}',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -422,7 +522,10 @@ class _CategoryTile extends ConsumerWidget {
                     icon: const Icon(Icons.more_vert, size: 20),
                     color: AppColors.onSurfaceVariant,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
                   ),
                   const SizedBox(width: 4),
                 ],
@@ -483,7 +586,9 @@ class _CategoryTile extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(categoryNotifierProvider.notifier).deleteCategory(category.id);
+              await ref
+                  .read(categoryNotifierProvider.notifier)
+                  .deleteCategory(category.id);
               if (context.mounted) {
                 ref.invalidate(categoriesProvider(''));
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -491,7 +596,10 @@ class _CategoryTile extends ConsumerWidget {
                 );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -503,7 +611,9 @@ class _CategoryTile extends ConsumerWidget {
     if (lower.contains('beverage')) return Icons.local_cafe;
     if (lower.contains('snack')) return Icons.fastfood;
     if (lower.contains('dairy') || lower.contains('bakery')) return Icons.cake;
-    if (lower.contains('grocery') || lower.contains('staple')) return Icons.shopping_bag;
+    if (lower.contains('grocery') || lower.contains('staple')) {
+      return Icons.shopping_bag;
+    }
     if (lower.contains('personal') || lower.contains('care')) return Icons.spa;
     if (lower.contains('household')) return Icons.home;
     if (lower.contains('baby')) return Icons.child_care;
@@ -512,12 +622,18 @@ class _CategoryTile extends ConsumerWidget {
 
   Color _categoryColor(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('beverage')) return const Color(0xFF1565C0);
+    if (lower.contains('beverage')) return AppColors.info;
     if (lower.contains('snack')) return const Color(0xFFF9A825);
-    if (lower.contains('dairy') || lower.contains('bakery')) return const Color(0xFF2E7D32);
-    if (lower.contains('grocery') || lower.contains('staple')) return const Color(0xFF6A1B9A);
-    if (lower.contains('personal') || lower.contains('care')) return const Color(0xFFE91E63);
-    if (lower.contains('household')) return const Color(0xFF00838F);
+    if (lower.contains('dairy') || lower.contains('bakery')) {
+      return const Color(0xFF2E7D32);
+    }
+    if (lower.contains('grocery') || lower.contains('staple')) {
+      return const Color(0xFF6A1B9A);
+    }
+    if (lower.contains('personal') || lower.contains('care')) {
+      return const Color(0xFFE91E63);
+    }
+    if (lower.contains('household')) return AppColors.info;
     if (lower.contains('baby')) return const Color(0xFFEF6C00);
     return AppColors.primary;
   }

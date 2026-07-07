@@ -140,6 +140,8 @@ async function saleRoutes(fastify) {
         });
 
         return sale;
+      }, {
+        timeout: 15000,
       });
 
       return reply.status(201).send(convertPrismaToJson(result));

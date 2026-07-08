@@ -29,7 +29,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   Timer? _debounceTimer;
   String _activeFilter = 'All';
   String? _selectedCategoryId;
-  final int _currentPage = 1;
 
   @override
   void dispose() {
@@ -39,22 +38,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     super.dispose();
   }
 
-  String? get _stockFilter {
-    if (_activeFilter == 'Low Stock') return 'LOW';
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filter = ProductFilter(
-      search: _searchController.text.trim().isEmpty
-          ? null
-          : _searchController.text.trim(),
-      categoryId: _selectedCategoryId,
-      stockFilter: _stockFilter,
-      page: _currentPage,
-    );
-    final productsAsync = ref.watch(productsProvider(filter));
+    final productsAsync = ref.watch(productsProvider);
     final categoriesAsync = ref.watch(categoriesProvider(''));
     final statsAsync = ref.watch(inventoryStatsProvider);
 
@@ -64,7 +50,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(inventoryStatsProvider);
-            ref.invalidate(productsProvider(filter));
+            ref.invalidate(productsProvider);
           },
           color: AppColors.primary,
           child: CustomScrollView(
@@ -136,22 +122,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppRoutes.stockAdjustment),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Adjust Stock',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        elevation: 4,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -215,10 +185,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         icon: Icons.inventory_2_outlined,
         iconBg: AppColors.primaryContainer,
         iconColor: AppColors.primary,
-        onTap: () => setState(() {
-          _activeFilter = 'All';
-          _selectedCategoryId = null;
-        }),
+        onTap: () {
+          _searchController.clear();
+          ref.read(productFilterProvider.notifier).state = ProductFilter();
+          setState(() => _activeFilter = 'All');
+        },
       ),
       _SummaryData(
         label: 'Stock value',
@@ -242,7 +213,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         icon: Icons.warning_amber_rounded,
         iconBg: const Color(0xFFFFF3E0),
         iconColor: const Color(0xFFF57C00),
-        onTap: () => setState(() => _activeFilter = 'Low Stock'),
+        onTap: () {
+          _searchController.clear();
+          ref.read(productFilterProvider.notifier).state = ProductFilter(stockFilter: 'LOW');
+          setState(() => _activeFilter = 'Low Stock');
+        },
       ),
       _SummaryData(
         label: 'Expiring soon',
@@ -251,7 +226,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         icon: Icons.timer_outlined,
         iconBg: const Color(0xFFFFEBEE),
         iconColor: const Color(0xFFD32F2F),
-        onTap: () => setState(() => _activeFilter = 'Expiring Soon'),
+        onTap: () {
+          _searchController.clear();
+          ref.read(productFilterProvider.notifier).state = ProductFilter();
+          setState(() => _activeFilter = 'Expiring Soon');
+        },
       ),
     ];
 
@@ -329,10 +308,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       : null,
                   onTap: () {
                     Navigator.pop(ctx);
-                    setState(() {
-                      _activeFilter = label;
-                      _selectedCategoryId = null;
-                    });
+                    _searchController.clear();
+                    String? stockFilter;
+                    if (label == 'Low Stock') stockFilter = 'LOW';
+                    ref.read(productFilterProvider.notifier).state = ProductFilter(stockFilter: stockFilter);
+                    setState(() => _activeFilter = label);
                   },
                 ),
             ],
@@ -346,11 +326,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     return TextField(
       controller: _searchController,
       focusNode: _searchFocusNode,
-      onChanged: (_) {
+      onChanged: (value) {
         _debounceTimer?.cancel();
         _debounceTimer = Timer(
           const Duration(milliseconds: 300),
-          () => setState(() {}),
+          () {
+            final current = ref.read(productFilterProvider);
+            ref.read(productFilterProvider.notifier).state = current.copyWith(
+              search: value.trim().isEmpty ? null : value.trim(),
+            );
+          },
         );
       },
       decoration: InputDecoration(
@@ -412,10 +397,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 return _filterChip(
                   label: label,
                   selected: isSelected,
-                  onTap: () => setState(() {
-                    _activeFilter = label;
-                    _selectedCategoryId = null;
-                  }),
+                  onTap: () {
+                    _searchController.clear();
+                    String? stockFilter;
+                    if (label == 'Low Stock') stockFilter = 'LOW';
+                    ref.read(productFilterProvider.notifier).state = ProductFilter(stockFilter: stockFilter);
+                    setState(() => _activeFilter = label);
+                  },
                 );
               }).toList(),
             ),
@@ -447,17 +435,30 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     _filterChip(
                       label: 'All categories',
                       selected: _selectedCategoryId == null,
-                      onTap: () => setState(() => _selectedCategoryId = null),
+                      onTap: () {
+                        _searchController.clear();
+                        final current = ref.read(productFilterProvider);
+                        ref.read(productFilterProvider.notifier).state = current.copyWith(categoryId: null);
+                        setState(() => _selectedCategoryId = null);
+                      },
                     ),
                     ...cats.map((category) {
                       final isSelected = _selectedCategoryId == category.id;
                       return _filterChip(
                         label: category.name,
                         selected: isSelected,
-                        onTap: () => setState(() {
-                          _selectedCategoryId = isSelected ? null : category.id;
-                          _activeFilter = 'All';
-                        }),
+                        onTap: () {
+                          _searchController.clear();
+                          final current = ref.read(productFilterProvider);
+                          ref.read(productFilterProvider.notifier).state = current.copyWith(
+                            categoryId: isSelected ? null : category.id,
+                            stockFilter: null,
+                          );
+                          setState(() {
+                            _selectedCategoryId = isSelected ? null : category.id;
+                            _activeFilter = 'All';
+                          });
+                        },
                       );
                     }),
                   ],
@@ -563,11 +564,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             if (hasFilters) ...[
               const SizedBox(height: 20),
               OutlinedButton.icon(
-                onPressed: () => setState(() {
-                  _activeFilter = 'All';
-                  _selectedCategoryId = null;
+                onPressed: () {
                   _searchController.clear();
-                }),
+                  ref.read(productFilterProvider.notifier).state = ProductFilter();
+                  setState(() {
+                    _activeFilter = 'All';
+                    _selectedCategoryId = null;
+                  });
+                },
                 icon: const Icon(Icons.clear, size: 18),
                 label: const Text('Clear Filters'),
                 style: OutlinedButton.styleFrom(
@@ -883,7 +887,7 @@ class _InventoryProductCard extends StatelessWidget {
               children: [
                 _MetricCol(
                   label: 'Quantity',
-                  value: '${product.totalStock} pcs',
+                  value: '${product.totalStock} ${product.unit.toLowerCase()}',
                   valueColor: qtyColor,
                 ),
                 _MetricCol(

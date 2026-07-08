@@ -584,7 +584,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       return;
     }
 
-    ref.invalidate(productsProvider(ProductFilter(search: null, page: 1)));
+    ref.invalidate(productsProvider);
     if (isEdit) ref.invalidate(productDetailProvider(widget.productId!));
     context.pop();
     _showSnack(isEdit ? 'Product updated' : 'Product created');

@@ -21,7 +21,6 @@ class SalesHistoryScreen extends ConsumerStatefulWidget {
 
 class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   final _searchController = TextEditingController();
-  var _filter = SaleFilter();
   Timer? _debounce;
 
   @override
@@ -34,13 +33,14 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      setState(() => _filter = _filter.copyWith(search: value.trim()));
+      final current = ref.read(saleFilterProvider);
+      ref.read(saleFilterProvider.notifier).state = current.copyWith(search: value.trim());
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final salesAsync = ref.watch(salesProvider(_filter));
+    final salesAsync = ref.watch(salesProvider);
     final currency = NumberFormat('#,##,##0.00');
 
     return Scaffold(
@@ -58,7 +58,9 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(salesProvider),
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -82,7 +84,10 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                       ? IconButton(
                           icon: const Icon(Icons.clear, size: 18),
                           color: AppColors.onSurfaceVariant,
-                          onPressed: () => setState(() { _searchController.clear(); _filter = SaleFilter(); }),
+                          onPressed: () {
+                            _searchController.clear();
+                            ref.read(saleFilterProvider.notifier).state = SaleFilter();
+                          },
                         )
                       : null,
                   border: InputBorder.none,
@@ -99,6 +104,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                   return _buildEmptyState();
                 }
                 return ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: sales.length,
                   itemBuilder: (context, index) {
@@ -113,10 +119,12 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildFilterChips() {
+    final filter = ref.watch(saleFilterProvider);
     final options = ['All', 'Paid', 'Unpaid', 'Credit'];
     return SizedBox(
       height: 40,
@@ -129,11 +137,14 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           final option = options[index];
           final statusMap = {'Paid': 'PAID', 'Unpaid': 'UNPAID', 'Credit': 'PARTIAL'};
           final selectedStatus = option == 'All' ? null : statusMap[option];
-          final isSelected = _filter.status == selectedStatus && (option != 'All' || _filter.status == null);
+          final isSelected = filter.status == selectedStatus && (option != 'All' || filter.status == null);
           return ChoiceChip(
             label: Text(option),
             selected: isSelected,
-            onSelected: (_) => setState(() => _filter = _filter.copyWith(status: selectedStatus)),
+            onSelected: (_) {
+              final current = ref.read(saleFilterProvider);
+              ref.read(saleFilterProvider.notifier).state = current.copyWith(status: selectedStatus);
+            },
             selectedColor: AppColors.primary,
             labelStyle: TextStyle(color: isSelected ? Colors.white : AppColors.onSurface, fontWeight: FontWeight.w600),
             backgroundColor: AppColors.surface,
@@ -146,7 +157,8 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   }
 
   Widget _buildEmptyState() {
-    final hasFilters = _filter.status != null || _searchController.text.isNotEmpty;
+    final filter = ref.watch(saleFilterProvider);
+    final hasFilters = filter.status != null || _searchController.text.isNotEmpty;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -174,7 +186,10 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
             if (hasFilters) ...[
               const SizedBox(height: 20),
               OutlinedButton.icon(
-                onPressed: () => setState(() { _searchController.clear(); _filter = SaleFilter(); }),
+                onPressed: () {
+                  _searchController.clear();
+                  ref.read(saleFilterProvider.notifier).state = SaleFilter();
+                },
                 icon: const Icon(Icons.clear, size: 18),
                 label: const Text('Clear Filters'),
                 style: OutlinedButton.styleFrom(

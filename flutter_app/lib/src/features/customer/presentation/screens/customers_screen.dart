@@ -21,7 +21,6 @@ class CustomersScreen extends ConsumerStatefulWidget {
 
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   final _searchController = TextEditingController();
-  var _filter = CustomerFilter();
   var _selectedStatus = 'All';
   Timer? _debounce;
 
@@ -35,13 +34,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      setState(() => _filter = _filter.copyWith(search: value.trim()));
+      final current = ref.read(customerFilterProvider);
+      ref.read(customerFilterProvider.notifier).state = current.copyWith(search: value.trim());
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final customersAsync = ref.watch(customersProvider(_filter));
+    final customersAsync = ref.watch(customersProvider);
 
     final count = customersAsync.valueOrNull?.length ?? 0;
     final filtered = customersAsync.valueOrNull != null
@@ -50,62 +50,65 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 112,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => context.go(AppRoutes.dashboard),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () => context.push(AppRoutes.addCustomer),
-                tooltip: 'Create Customer',
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(customersProvider),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 112,
+              pinned: true,
+              backgroundColor: AppColors.primary,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => context.go(AppRoutes.dashboard),
               ),
-              const SizedBox(width: 4),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
+                actions: [
+                IconButton(
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () => context.push(AppRoutes.addCustomer),
+                  tooltip: 'Create Customer',
                 ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Customers',
-                          style: context.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                const SizedBox(width: 4),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Customers',
+                            style: context.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          _selectedStatus == 'All'
-                              ? '$count customers'
-                              : '${filtered.length} of $count · $_selectedStatus',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
+                          Text(
+                            _selectedStatus == 'All'
+                                ? '$count customers'
+                                : '${filtered.length} of $count · $_selectedStatus',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -162,6 +165,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.addCustomer),
         backgroundColor: AppColors.primary,
@@ -206,10 +210,10 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               ? IconButton(
                   icon: const Icon(Icons.clear, size: 18),
                   color: AppColors.onSurfaceVariant,
-                  onPressed: () => setState(() {
+                  onPressed: () {
                     _searchController.clear();
-                    _filter = CustomerFilter();
-                  }),
+                    ref.read(customerFilterProvider.notifier).state = CustomerFilter();
+                  },
                 )
               : null,
           border: InputBorder.none,
@@ -237,7 +241,9 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           return ChoiceChip(
             label: Text(option),
             selected: isSelected,
-            onSelected: (_) => setState(() => _selectedStatus = option),
+            onSelected: (_) {
+              setState(() => _selectedStatus = option);
+            },
             selectedColor: AppColors.primary,
             labelStyle: TextStyle(
               color: isSelected ? Colors.white : AppColors.onSurface,
@@ -487,11 +493,12 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               )
             else
               OutlinedButton.icon(
-                onPressed: () => setState(() {
+                onPressed: () {
                   _selectedStatus = 'All';
                   _searchController.clear();
-                  _filter = CustomerFilter();
-                }),
+                  ref.read(customerFilterProvider.notifier).state = CustomerFilter();
+                  setState(() {});
+                },
                 icon: const Icon(Icons.clear, size: 18),
                 label: const Text('Clear Filters'),
                 style: OutlinedButton.styleFrom(

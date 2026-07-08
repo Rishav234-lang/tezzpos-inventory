@@ -14,8 +14,11 @@ final customerRepositoryProvider = Provider<CustomerRepository>(
   (ref) => CustomerRepositoryImpl(ref.watch(customerRemoteDataSourceProvider)),
 );
 
-final customersProvider = FutureProvider.family<List<Customer>, CustomerFilter>(
-  (ref, filter) async {
+final customerFilterProvider = StateProvider<CustomerFilter>((ref) => CustomerFilter());
+
+final customersProvider = FutureProvider.autoDispose<List<Customer>>(
+  (ref) async {
+    final filter = ref.watch(customerFilterProvider);
     final repository = ref.watch(customerRepositoryProvider);
     final result = await repository.getCustomers(
       search: filter.search,
@@ -29,7 +32,25 @@ final customersProvider = FutureProvider.family<List<Customer>, CustomerFilter>(
   },
 );
 
-final customerDetailProvider = FutureProvider.family<Customer, String>(
+final customerPickerProvider = FutureProvider.autoDispose.family<List<Customer>, String?>((ref, search) async {
+  final repository = ref.watch(customerRepositoryProvider);
+  final result = await repository.getCustomers(search: search, page: 1, limit: 50);
+  return result.fold(
+    (failure) => throw failure,
+    (customers) => customers,
+  );
+});
+
+final allCustomersProvider = FutureProvider.autoDispose<List<Customer>>((ref) async {
+  final repository = ref.watch(customerRepositoryProvider);
+  final result = await repository.getCustomers(page: 1, limit: 200);
+  return result.fold(
+    (failure) => throw failure,
+    (customers) => customers,
+  );
+});
+
+final customerDetailProvider = FutureProvider.autoDispose.family<Customer, String>(
   (ref, id) async {
     final repository = ref.watch(customerRepositoryProvider);
     final result = await repository.getCustomerById(id);
@@ -40,7 +61,7 @@ final customerDetailProvider = FutureProvider.family<Customer, String>(
   },
 );
 
-final customerLedgerProvider = FutureProvider.family<Map<String, dynamic>, String>(
+final customerLedgerProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>(
   (ref, id) async {
     final repository = ref.watch(customerRepositoryProvider);
     final result = await repository.getCustomerLedger(id);
@@ -51,7 +72,7 @@ final customerLedgerProvider = FutureProvider.family<Map<String, dynamic>, Strin
   },
 );
 
-final customerSalesProvider = FutureProvider.family<Map<String, dynamic>, String>(
+final customerSalesProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>(
   (ref, id) async {
     final repository = ref.watch(customerRepositoryProvider);
     final result = await repository.getCustomerSales(id);

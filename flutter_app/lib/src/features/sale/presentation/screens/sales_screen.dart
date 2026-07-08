@@ -9,6 +9,7 @@ import '../../../../core/utils/extensions.dart';
 import '../../../customer/domain/entities/customer.dart';
 import '../../../product/domain/entities/product.dart';
 import '../../../product/presentation/providers/product_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../providers/sale_providers.dart';
 
 class SalesScreen extends ConsumerStatefulWidget {
@@ -99,7 +100,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(productsProvider(ProductFilter(search: _search, limit: 20)));
+    final productsAsync = ref.watch(productPickerProvider(_search.isEmpty ? null : _search));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -550,6 +551,8 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
     if (!mounted) return;
     ref.invalidate(salesProvider);
-    context.push('${AppRoutes.billInvoice}/${sale.id}');
+    ref.invalidate(productsProvider);
+    ref.invalidate(dashboardStatsProvider);
+    context.go(AppRoutes.inventory);
   }
 }

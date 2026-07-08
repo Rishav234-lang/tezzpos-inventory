@@ -18,8 +18,11 @@ final productRepositoryProvider = Provider<ProductRepository>(
   (ref) => ProductRepositoryImpl(ref.watch(productRemoteDataSourceProvider)),
 );
 
-final productsProvider = FutureProvider.family<List<Product>, ProductFilter>(
-  (ref, filter) async {
+final productFilterProvider = StateProvider<ProductFilter>((ref) => ProductFilter());
+
+final productsProvider = FutureProvider.autoDispose<List<Product>>(
+  (ref) async {
+    final filter = ref.watch(productFilterProvider);
     final repository = ref.watch(productRepositoryProvider);
     final result = await repository.getProducts(
       search: filter.search,
@@ -36,7 +39,28 @@ final productsProvider = FutureProvider.family<List<Product>, ProductFilter>(
   },
 );
 
-final productDetailProvider = FutureProvider.family<Product, String>(
+final productPickerProvider = FutureProvider.autoDispose.family<List<Product>, String?>((ref, search) async {
+  final repository = ref.watch(productRepositoryProvider);
+  final result = await repository.getProducts(
+    search: search,
+    limit: 50,
+  );
+  return result.fold(
+    (failure) => throw failure,
+    (products) => products,
+  );
+});
+
+final allProductsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
+  final repository = ref.watch(productRepositoryProvider);
+  final result = await repository.getProducts(limit: 200);
+  return result.fold(
+    (failure) => throw failure,
+    (products) => products,
+  );
+});
+
+final productDetailProvider = FutureProvider.autoDispose.family<Product, String>(
   (ref, id) async {
     final repository = ref.watch(productRepositoryProvider);
     final result = await repository.getProductById(id);

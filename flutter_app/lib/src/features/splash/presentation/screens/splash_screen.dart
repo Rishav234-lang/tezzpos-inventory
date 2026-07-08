@@ -8,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../presentation/providers/splash_provider.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -72,6 +73,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -118,7 +120,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     end: Offset.zero,
                   ).animate(_textController),
                   child: Text(
-                    AppStrings.appName,
+                    l10n.appName,
                     style: context.textTheme.displaySmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -135,7 +137,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   curve: Curves.easeOut,
                 ),
                 child: Text(
-                  AppStrings.tagline,
+                  l10n.tagline,
                   style: context.textTheme.titleMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.85),
                     letterSpacing: 4,

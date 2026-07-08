@@ -5,16 +5,21 @@ import 'package:intl/intl.dart';
 
 import '../../../../config/providers.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 import '../../../subscription/presentation/providers/subscription_providers.dart';
+import '../providers/profile_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authNotifierProvider).valueOrNull?.user;
+    final authUser = ref.watch(authNotifierProvider).valueOrNull?.user;
+    final freshUserAsync = ref.watch(profileUserProvider);
+    final user = freshUserAsync.valueOrNull ?? authUser;
     final subscription = ref.watch(mySubscriptionProvider).valueOrNull;
     final name = user?.name.trim().isNotEmpty == true ? user!.name : '';
     final email = user?.email.trim() ?? '';
@@ -25,6 +30,7 @@ class ProfileScreen extends ConsumerWidget {
     final plan = subscription?['plan'] as Map<String, dynamic>?;
     final planName = plan?['name']?.toString() ?? '';
     final planCode = plan?['code']?.toString() ?? '';
+    final l10n = AppLocalizations.of(context);
     final rawSubscriptionStatus = subscription?['status']?.toString();
     final billingCycle = subscription?['billingCycle']?.toString() ?? '';
     final autoRenew = subscription?['autoRenew'] as bool?;
@@ -36,21 +42,24 @@ class ProfileScreen extends ConsumerWidget {
       subscriptionEndDate,
     );
     final subscriptionStatus = subscription == null
-        ? 'No subscription data'
+        ? l10n.noSubscriptionData
         : (isSubscriptionActive
-              ? 'Active'
-              : _statusText(rawSubscriptionStatus));
+              ? l10n.active
+              : _statusText(rawSubscriptionStatus, l10n));
     final accountStatus = user?.companyStatus?.trim().isNotEmpty == true
-        ? _statusText(user?.companyStatus)
+        ? _statusText(user?.companyStatus, l10n)
         : (isSubscriptionActive
-              ? 'Active'
-              : _statusText(rawSubscriptionStatus));
+              ? l10n.active
+              : _statusText(rawSubscriptionStatus, l10n));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(profileUserProvider),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
@@ -63,7 +72,7 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Profile',
+                        l10n.profile,
                         style: context.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
                           color: AppColors.onSurface,
@@ -90,62 +99,63 @@ class ProfileScreen extends ConsumerWidget {
                     name: name,
                     email: email,
                     companyName: companyName,
+                    companyNotAvailable: l10n.companyNotAvailable,
                   ),
                   const SizedBox(height: 16),
-                  _SectionTitle('Profile Details'),
+                  _SectionTitle(l10n.profileDetails),
                   _InfoCard(
                     children: [
                       _InfoRow(
                         icon: Icons.person_outline,
-                        label: 'Name',
-                        value: name.isEmpty ? 'Not available' : name,
+                        label: l10n.name,
+                        value: name.isEmpty ? l10n.notAvailable : name,
                       ),
                       _InfoRow(
                         icon: Icons.mail_outline,
-                        label: 'Email',
-                        value: email.isEmpty ? 'Not available' : email,
+                        label: l10n.email,
+                        value: email.isEmpty ? l10n.notAvailable : email,
                       ),
                       _InfoRow(
                         icon: Icons.storefront_outlined,
-                        label: 'Company',
+                        label: l10n.company,
                         value: companyName.isEmpty
-                            ? 'Not available'
+                            ? l10n.notAvailable
                             : companyName,
                       ),
                       _InfoRow(
                         icon: Icons.badge_outlined,
-                        label: 'Role',
-                        value: role.isEmpty ? 'Not available' : _roleText(role),
+                        label: l10n.role,
+                        value: role.isEmpty ? l10n.notAvailable : _roleText(role, l10n),
                         showDivider: false,
                       ),
                     ],
                   ),
                   const SizedBox(height: 18),
-                  _SectionTitle('License & Subscription'),
+                  _SectionTitle(l10n.licenseAndSubscription),
                   _InfoCard(
                     children: [
                       _StatusRow(
-                        label: 'License',
+                        label: l10n.license,
                         value: subscriptionStatus,
                         active: isSubscriptionActive,
                       ),
                       _InfoRow(
                         icon: Icons.verified_user_outlined,
-                        label: 'Account status',
+                        label: l10n.accountStatus,
                         value: accountStatus,
                       ),
                       _InfoRow(
                         icon: Icons.event_available_outlined,
-                        label: 'Valid till',
+                        label: l10n.validTill,
                         value: subscriptionEndDate == null
-                            ? 'Not available'
+                            ? l10n.notAvailable
                             : DateFormat(
                                 'dd MMM yyyy',
                               ).format(subscriptionEndDate),
                       ),
                       _InfoRow(
                         icon: Icons.payments_outlined,
-                        label: 'Subscription',
+                        label: l10n.subscription,
                         value: planName.isEmpty
                             ? subscriptionStatus
                             : '$planName - $subscriptionStatus',
@@ -154,42 +164,44 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  _SectionTitle('Current Subscription Data'),
+                  _SectionTitle(l10n.currentSubscriptionData),
                   _InfoCard(
                     children: [
                       _InfoRow(
                         icon: Icons.confirmation_number_outlined,
-                        label: 'Subscription ID',
+                        label: l10n.subscriptionId,
                         value: subscriptionId.isEmpty
-                            ? 'Not available'
+                            ? l10n.notAvailable
                             : subscriptionId,
                       ),
                       _InfoRow(
                         icon: Icons.workspace_premium_outlined,
-                        label: 'Plan',
+                        label: l10n.plan,
                         value: planName.isEmpty
-                            ? 'Not available'
+                            ? l10n.notAvailable
                             : (planCode.isEmpty
                                   ? planName
                                   : '$planName ($planCode)'),
                       ),
                       _InfoRow(
                         icon: Icons.calendar_month_outlined,
-                        label: 'Billing cycle',
+                        label: l10n.billingCycle,
                         value: billingCycle.isEmpty
-                            ? 'Not available'
-                            : _statusText(billingCycle),
+                            ? l10n.notAvailable
+                            : _statusText(billingCycle, l10n),
                       ),
                       _InfoRow(
                         icon: Icons.autorenew_outlined,
-                        label: 'Auto renew',
+                        label: l10n.autoRenew,
                         value: autoRenew == null
-                            ? 'Not available'
-                            : (autoRenew ? 'Enabled' : 'Disabled'),
+                            ? l10n.notAvailable
+                            : (autoRenew ? l10n.enabled : l10n.disabled),
                         showDivider: false,
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _LanguageSelector(),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -205,9 +217,9 @@ class ProfileScreen extends ConsumerWidget {
                       onPressed: () =>
                           context.push(AppRoutes.subscriptionManagement),
                       icon: const Icon(Icons.workspace_premium_outlined),
-                      label: const Text(
-                        'View Subscription Details',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      label: Text(
+                        l10n.viewSubscriptionDetails,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -217,7 +229,8 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   static String _initials(String name) {
@@ -225,11 +238,6 @@ class ProfileScreen extends ConsumerWidget {
     if (parts.isEmpty || parts.first.isEmpty) return 'U';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  }
-
-  static bool _isActive(String? status) {
-    final normalized = status?.toUpperCase();
-    return normalized == 'ACTIVE' || normalized == 'TRIALING';
   }
 
   static bool _isValidSubscription(String? status, DateTime? endDate) {
@@ -248,20 +256,216 @@ class ProfileScreen extends ConsumerWidget {
     return DateTime.tryParse(value.toString());
   }
 
-  static String _statusText(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Not available';
-    return value
-        .split('_')
-        .map((part) => part.toLowerCase().capitalize)
-        .join(' ');
+  static String _statusText(String? value, AppLocalizations l10n) {
+    if (value == null || value.trim().isEmpty) return l10n.notAvailable;
+    final normalized = value.trim().toUpperCase();
+    switch (normalized) {
+      case 'ACTIVE':
+        return l10n.active;
+      case 'INACTIVE':
+        return l10n.inactive;
+      case 'TRIAL':
+      case 'TRIALING':
+        return l10n.trial;
+      case 'EXPIRED':
+        return l10n.expired;
+      case 'SUSPENDED':
+        return l10n.suspended;
+      case 'PENDING':
+        return l10n.pending;
+      case 'APPROVED':
+        return l10n.approved;
+      case 'REJECTED':
+        return l10n.rejected;
+      case 'MONTHLY':
+        return l10n.monthly;
+      case 'YEARLY':
+        return l10n.yearly;
+      default:
+        return value
+            .split('_')
+            .map((part) => part.toLowerCase().capitalize)
+            .join(' ');
+    }
   }
 
-  static String _roleText(String? role) {
-    if (role == null || role.trim().isEmpty) return 'User';
-    return role
-        .split('_')
-        .map((part) => part.toLowerCase().capitalize)
-        .join(' ');
+  static String _roleText(String? role, AppLocalizations l10n) {
+    if (role == null || role.trim().isEmpty) return l10n.user;
+    final normalized = role.trim().toUpperCase();
+    switch (normalized) {
+      case 'OWNER':
+        return l10n.owner;
+      case 'SUPER_ADMIN':
+        return l10n.superAdmin;
+      case 'USER':
+        return l10n.user;
+      default:
+        return role
+            .split('_')
+            .map((part) => part.toLowerCase().capitalize)
+            .join(' ');
+    }
+  }
+}
+
+class _LanguageSelector extends ConsumerWidget {
+  const _LanguageSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final currentLocale = ref.watch(localeProvider);
+
+    String languageLabel(Locale locale) {
+      switch (locale.languageCode) {
+        case 'hi':
+          return l10n.hindi;
+        case 'mr':
+          return l10n.marathi;
+        case 'en':
+        default:
+          return l10n.english;
+      }
+    }
+
+    return _InfoCard(
+      children: [
+        InkWell(
+          onTap: () => _showLanguageDialog(context, ref),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.language_outlined,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.language,
+                        style: context.textTheme.labelMedium?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        languageLabel(currentLocale),
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: AppColors.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(l10n.selectLanguage),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _LanguageOption(
+                label: l10n.english,
+                localeCode: 'en',
+              ),
+              _LanguageOption(
+                label: l10n.hindi,
+                localeCode: 'hi',
+              ),
+              _LanguageOption(
+                label: l10n.marathi,
+                localeCode: 'mr',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.cancel),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LanguageOption extends ConsumerWidget {
+  final String label;
+  final String localeCode;
+
+  const _LanguageOption({
+    required this.label,
+    required this.localeCode,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocale = ref.watch(localeProvider);
+    final isSelected = currentLocale.languageCode == localeCode;
+
+    return ListTile(
+      title: Text(
+        label,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+          : const SizedBox(width: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      onTap: () async {
+        await ref.read(localeProvider.notifier).setLanguageCode(localeCode);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).languageChanged,
+              ),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      },
+    );
   }
 }
 
@@ -270,12 +474,14 @@ class _ProfileHero extends StatelessWidget {
   final String name;
   final String email;
   final String companyName;
+  final String companyNotAvailable;
 
   const _ProfileHero({
     required this.initials,
     required this.name,
     required this.email,
     required this.companyName,
+    required this.companyNotAvailable,
   });
 
   @override
@@ -336,7 +542,7 @@ class _ProfileHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  companyName.isEmpty ? 'Company not available' : companyName,
+                  companyName.isEmpty ? companyNotAvailable : companyName,
                   style: context.textTheme.labelLarge?.copyWith(
                     color: AppColors.secondary,
                     fontWeight: FontWeight.w800,

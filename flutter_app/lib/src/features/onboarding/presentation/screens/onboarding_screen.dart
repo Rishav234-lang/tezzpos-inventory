@@ -8,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 
 class OnboardingPage {
   final String title;
@@ -23,27 +24,24 @@ class OnboardingPage {
   });
 }
 
-final _pages = [
-  const OnboardingPage(
-    title: 'Smart Inventory',
-    description:
-        'Track every product with batch-level precision. FIFO stock management ensures you never lose track of expiry dates or stock levels.',
+List<OnboardingPage> _buildPages(AppLocalizations l10n) => [
+  OnboardingPage(
+    title: l10n.onboardingTitle1,
+    description: l10n.onboardingDesc1,
     icon: Icons.inventory_2_rounded,
     color: AppColors.primary,
   ),
-  const OnboardingPage(
-    title: 'GST Billing',
-    description:
-        'Generate GST-compliant invoices with auto-calculated CGST, SGST & IGST. Export PDFs instantly and stay tax-ready all year.',
+  OnboardingPage(
+    title: l10n.onboardingTitle2,
+    description: l10n.onboardingDesc2,
     icon: Icons.receipt_long_rounded,
     color: AppColors.secondary,
   ),
-  const OnboardingPage(
-    title: 'Grow Your Business',
-    description:
-        'Real-time dashboards, vendor & customer insights, profit reports, and low-stock alerts — everything to scale smarter.',
+  OnboardingPage(
+    title: l10n.onboardingTitle3,
+    description: l10n.onboardingDesc3,
     icon: Icons.trending_up_rounded,
-    color: Color(0xFF059669),
+    color: const Color(0xFF059669),
   ),
 ];
 
@@ -70,8 +68,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+  void _nextPage(int pageCount) {
+    if (_currentPage < pageCount - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
@@ -89,6 +87,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final pages = _buildPages(l10n);
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -101,7 +101,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: TextButton(
                   onPressed: _finishOnboarding,
                   child: Text(
-                    AppStrings.skip,
+                    l10n.skip,
                     style: context.textTheme.titleSmall?.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
@@ -115,9 +115,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
-                itemCount: _pages.length,
+                itemCount: pages.length,
                 itemBuilder: (context, index) {
-                  return _OnboardingPageView(page: _pages[index]);
+                  return _OnboardingPageView(page: pages[index]);
                 },
               ),
             ),
@@ -131,7 +131,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   // Page indicators
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_pages.length, (index) {
+                    children: List.generate(pages.length, (index) {
                       final isActive = index == _currentPage;
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
@@ -152,11 +152,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
                   // Next / Get Started button
                   AppButton(
-                    text: _currentPage == _pages.length - 1
-                        ? AppStrings.getStarted
-                        : AppStrings.next,
-                    onPressed: _nextPage,
-                    icon: _currentPage == _pages.length - 1
+                    text: _currentPage == pages.length - 1
+                        ? l10n.getStarted
+                        : l10n.next,
+                    onPressed: () => _nextPage(pages.length),
+                    icon: _currentPage == pages.length - 1
                         ? Icons.arrow_forward_rounded
                         : null,
                   ),

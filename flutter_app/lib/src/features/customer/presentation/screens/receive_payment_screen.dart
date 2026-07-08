@@ -193,7 +193,7 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
           : _buildCustomerTile(_selectedCustomer!);
     }
 
-    final customersAsync = ref.watch(customersProvider(CustomerFilter()));
+    final customersAsync = ref.watch(customersProvider);
     return customersAsync.when(
       data: (customers) {
         return Column(
@@ -356,7 +356,7 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
         ),
       );
     } else {
-      ref.invalidate(customersProvider(CustomerFilter()));
+      ref.invalidate(customersProvider);
       ref.invalidate(customerLedgerProvider(_selectedCustomer!.id));
       ref.invalidate(customerDetailProvider(_selectedCustomer!.id));
       context.pop();

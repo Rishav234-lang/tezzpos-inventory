@@ -37,7 +37,7 @@ class _SelectCustomerScreenState extends ConsumerState<SelectCustomerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customersAsync = ref.watch(customersProvider(CustomerFilter(search: _search.isEmpty ? null : _search, limit: 50)));
+    final customersAsync = ref.watch(customerPickerProvider(_search.isEmpty ? null : _search));
 
     return Scaffold(
       backgroundColor: AppColors.background,

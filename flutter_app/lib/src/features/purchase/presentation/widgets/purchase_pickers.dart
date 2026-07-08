@@ -21,9 +21,7 @@ class _VendorPickerState extends ConsumerState<VendorPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final vendorsAsync = ref.watch(
-      vendorsProvider(VendorFilter(search: _search.isEmpty ? null : _search)),
-    );
+    final vendorsAsync = ref.watch(vendorPickerProvider(_search.isEmpty ? null : _search));
 
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -120,9 +118,7 @@ class _ProductPickerState extends ConsumerState<ProductPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(
-      productsProvider(ProductFilter(search: _search.isEmpty ? null : _search, limit: 50)),
-    );
+    final productsAsync = ref.watch(productPickerProvider(_search.isEmpty ? null : _search));
 
     return DraggableScrollableSheet(
       initialChildSize: 0.6,

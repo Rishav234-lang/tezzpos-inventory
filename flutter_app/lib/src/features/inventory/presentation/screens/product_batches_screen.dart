@@ -11,7 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 
 final _productBatchesProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, productId) async {
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, productId) async {
       final dio = ref.watch(dioProvider).dio;
       final response = await dio.get(
         ApiConstants.inventoryBatches,
@@ -59,23 +59,43 @@ class ProductBatchesScreen extends ConsumerWidget {
         surfaceTintColor: AppColors.background,
         elevation: 0,
       ),
-      body: batchesAsync.when(
-        data: (data) {
-          final batches = (data['data'] as List<dynamic>?) ?? [];
-          if (batches.isEmpty) {
-            return _buildEmptyState(context);
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: batches.length,
-            itemBuilder: (context, index) {
-              final batch = batches[index] as Map<String, dynamic>;
-              return _BatchCard(batch: batch);
-            },
-          );
-        },
-        loading: () => _buildShimmer(),
-        error: (e, _) => Center(child: Text('Error: $e')),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(_productBatchesProvider(productId)),
+        child: batchesAsync.when(
+          data: (data) {
+            final batches = (data['data'] as List<dynamic>?) ?? [];
+            if (batches.isEmpty) {
+              return LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: constraints.maxHeight,
+                    child: _buildEmptyState(context),
+                  ),
+                ),
+              );
+            }
+            return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: batches.length,
+              itemBuilder: (context, index) {
+                final batch = batches[index] as Map<String, dynamic>;
+                return _BatchCard(batch: batch);
+              },
+            );
+          },
+          loading: () => _buildShimmer(),
+          error: (e, _) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -99,18 +119,23 @@ class ProductBatchesScreen extends ConsumerWidget {
   }
 
   Widget _buildShimmer() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.surface,
-      highlightColor: AppColors.background,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 4,
-        itemBuilder: (_, _) => Container(
-          height: 160,
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      child: Shimmer.fromColors(
+        baseColor: AppColors.surface,
+        highlightColor: AppColors.background,
+        child: Column(
+          children: List.generate(
+            4,
+            (_) => Container(
+              height: 160,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
           ),
         ),
       ),
@@ -137,10 +162,10 @@ class _BatchCard extends StatelessWidget {
     final soldQty = purchasedQty - availableQty;
     final purchasePrice = _toDouble(batch['purchasePrice']);
     final mrp = _toDouble(batch['mrp']);
-    final productName =
-        (batch['product'] as Map<String, dynamic>?)?['name'] ?? 'N/A';
-    final productSku =
-        (batch['product'] as Map<String, dynamic>?)?['sku'] ?? '';
+    final productData = batch['product'] as Map<String, dynamic>?;
+    final productName = productData?['name'] ?? 'N/A';
+    final productSku = productData?['sku'] ?? '';
+    final unit = (productData?['unit'] as String?)?.toLowerCase() ?? 'pcs';
     final vendorName =
         (batch['vendor'] as Map<String, dynamic>?)?['name'] ?? 'N/A';
     final invoiceNumber =
@@ -294,14 +319,14 @@ class _BatchCard extends StatelessWidget {
                 children: [
                   _MetricBox(
                     label: 'Purchased Qty',
-                    value: '$purchasedQty pcs',
+                    value: '$purchasedQty $unit',
                   ),
                   _MetricBox(
                     label: 'Available Qty',
-                    value: '$availableQty pcs',
+                    value: '$availableQty $unit',
                     valueColor: const Color(0xFF388E3C),
                   ),
-                  _MetricBox(label: 'Sold Qty', value: '$soldQty pcs'),
+                  _MetricBox(label: 'Sold Qty', value: '$soldQty $unit'),
                 ],
               ),
             ),

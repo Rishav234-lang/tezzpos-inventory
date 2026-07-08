@@ -14,8 +14,11 @@ final vendorRepositoryProvider = Provider<VendorRepository>(
   (ref) => VendorRepositoryImpl(ref.watch(vendorRemoteDataSourceProvider)),
 );
 
-final vendorsProvider = FutureProvider.family<List<Vendor>, VendorFilter>(
-  (ref, filter) async {
+final vendorFilterProvider = StateProvider<VendorFilter>((ref) => VendorFilter());
+
+final vendorsProvider = FutureProvider.autoDispose<List<Vendor>>(
+  (ref) async {
+    final filter = ref.watch(vendorFilterProvider);
     final repository = ref.watch(vendorRepositoryProvider);
     final result = await repository.getVendors(
       search: filter.search,
@@ -29,7 +32,25 @@ final vendorsProvider = FutureProvider.family<List<Vendor>, VendorFilter>(
   },
 );
 
-final vendorDetailProvider = FutureProvider.family<Vendor, String>(
+final vendorPickerProvider = FutureProvider.autoDispose.family<List<Vendor>, String?>((ref, search) async {
+  final repository = ref.watch(vendorRepositoryProvider);
+  final result = await repository.getVendors(search: search, page: 1, limit: 50);
+  return result.fold(
+    (failure) => throw failure,
+    (vendors) => vendors,
+  );
+});
+
+final allVendorsProvider = FutureProvider.autoDispose<List<Vendor>>((ref) async {
+  final repository = ref.watch(vendorRepositoryProvider);
+  final result = await repository.getVendors(search: null, page: 1, limit: 200);
+  return result.fold(
+    (failure) => throw failure,
+    (vendors) => vendors,
+  );
+});
+
+final vendorDetailProvider = FutureProvider.autoDispose.family<Vendor, String>(
   (ref, id) async {
     final repository = ref.watch(vendorRepositoryProvider);
     final result = await repository.getVendorById(id);
@@ -40,7 +61,7 @@ final vendorDetailProvider = FutureProvider.family<Vendor, String>(
   },
 );
 
-final vendorLedgerProvider = FutureProvider.family<Map<String, dynamic>, String>(
+final vendorLedgerProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>(
   (ref, id) async {
     final repository = ref.watch(vendorRepositoryProvider);
     final result = await repository.getVendorLedger(id);

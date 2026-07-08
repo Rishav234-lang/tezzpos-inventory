@@ -43,46 +43,50 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(context, categoriesAsync),
-          SliverToBoxAdapter(child: _buildSearchBar(context)),
-          categoriesAsync.when(
-            data: (categories) => _buildCategoryList(context, categories),
-            loading: () => SliverToBoxAdapter(child: _buildShimmer(context)),
-            error: (error, _) => SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: AppColors.error,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Failed to load categories',
-                      style: TextStyle(
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(categoriesProvider(_searchQuery)),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            _buildSliverAppBar(context, categoriesAsync),
+            SliverToBoxAdapter(child: _buildSearchBar(context)),
+            categoriesAsync.when(
+              data: (categories) => _buildCategoryList(context, categories),
+              loading: () => SliverToBoxAdapter(child: _buildShimmer(context)),
+              error: (error, _) => SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
                         color: AppColors.error,
-                        fontWeight: FontWeight.w600,
+                        size: 48,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$error',
-                      style: TextStyle(
-                        color: AppColors.onSurfaceVariant,
-                        fontSize: 12,
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load categories',
+                        style: TextStyle(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '$error',
+                        style: TextStyle(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
       ),
     );
   }
@@ -387,6 +391,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         final category = filtered[index];
         return _CategoryTile(
           category: category,
+          searchQuery: _searchQuery,
           onTap: () =>
               context.push('${AppRoutes.categoryDetail}/${category.id}'),
         );
@@ -397,9 +402,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
 class _CategoryTile extends ConsumerWidget {
   final Category category;
+  final String searchQuery;
   final VoidCallback onTap;
 
-  const _CategoryTile({required this.category, required this.onTap});
+  const _CategoryTile({required this.category, required this.searchQuery, required this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -590,7 +596,7 @@ class _CategoryTile extends ConsumerWidget {
                   .read(categoryNotifierProvider.notifier)
                   .deleteCategory(category.id);
               if (context.mounted) {
-                ref.invalidate(categoriesProvider(''));
+                ref.invalidate(categoriesProvider(searchQuery));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Category deleted')),
                 );

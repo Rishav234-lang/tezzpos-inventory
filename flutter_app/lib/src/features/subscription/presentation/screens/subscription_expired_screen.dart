@@ -11,6 +11,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 import '../providers/subscription_providers.dart';
 
 // Conditionally import razorpay_flutter for non-web platforms
@@ -51,7 +52,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
     final status = uri.queryParameters['status'];
 
     if (status == 'cancelled') {
-      if (mounted) setState(() => _errorMessage = 'Payment was cancelled.');
+      if (mounted) setState(() => _errorMessage = AppLocalizations.of(context).paymentCancelled);
       return;
     }
 
@@ -74,13 +75,13 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
         if (verified) {
           ref.invalidate(mySubscriptionProvider);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Payment successful! Redirecting...'), backgroundColor: AppColors.success),
+            SnackBar(content: Text(AppLocalizations.of(context).paymentSuccessful), backgroundColor: AppColors.success),
           );
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) context.go(AppRoutes.dashboard);
           });
         } else {
-          setState(() => _errorMessage = 'Payment verification failed. Please contact support.');
+          setState(() => _errorMessage = AppLocalizations.of(context).paymentVerificationFailed);
         }
       }
     }
@@ -113,21 +114,21 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
         ref.invalidate(mySubscriptionProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Payment successful! Redirecting...'), backgroundColor: AppColors.success),
+            SnackBar(content: Text(AppLocalizations.of(context).paymentSuccessful), backgroundColor: AppColors.success),
           );
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) context.go(AppRoutes.dashboard);
           });
         }
       } else if (mounted) {
-        setState(() => _errorMessage = 'Payment verification failed. Please contact support.');
+        setState(() => _errorMessage = AppLocalizations.of(context).paymentVerificationFailed);
       }
     } else {
       // Subscription authorization - webhook handles backend update
       if (mounted) {
         ref.invalidate(mySubscriptionProvider);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Auto-pay authorized successfully!'), backgroundColor: AppColors.success),
+          SnackBar(content: Text(AppLocalizations.of(context).autoPayAuthorizedSuccessfully), backgroundColor: AppColors.success),
         );
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) context.go(AppRoutes.dashboard);
@@ -138,7 +139,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
 
   void _handlePaymentError(PaymentFailureResponse response) {
     if (mounted) {
-      setState(() => _errorMessage = 'Payment failed: ${response.message}');
+      setState(() => _errorMessage = AppLocalizations.of(context).paymentFailed(response.message ?? ''));
     }
   }
 
@@ -160,7 +161,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
       final planId = plan?['id'] as String?;
 
       if (planId == null) {
-        setState(() => _errorMessage = 'No subscription plan found. Please contact support.');
+        setState(() => _errorMessage = AppLocalizations.of(context).noSubscriptionPlanFound);
         return;
       }
 
@@ -170,7 +171,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
       );
 
       if (orderData == null) {
-        setState(() => _errorMessage = 'Failed to create payment order. Please try again.');
+        setState(() => _errorMessage = AppLocalizations.of(context).failedToCreatePaymentOrder);
         return;
       }
 
@@ -193,7 +194,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
         if (await canLaunchUrl(checkoutUrl)) {
           await launchUrl(checkoutUrl, webOnlyWindowName: '_self');
         } else {
-          setState(() => _errorMessage = 'Could not open payment page.');
+          setState(() => _errorMessage = AppLocalizations.of(context).couldNotOpenPaymentPage);
         }
         return;
       }
@@ -229,7 +230,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
 
     try {
       if (kIsWeb) {
-        setState(() => _errorMessage = 'Auto-pay setup is only available on the mobile app.');
+        setState(() => _errorMessage = AppLocalizations.of(context).autoPaySetupOnlyMobile);
         return;
       }
 
@@ -240,7 +241,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
       final planId = plan?['id'] as String?;
 
       if (planId == null) {
-        setState(() => _errorMessage = 'No subscription plan found. Please contact support.');
+        setState(() => _errorMessage = AppLocalizations.of(context).noSubscriptionPlanFound);
         return;
       }
 
@@ -250,7 +251,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
       );
 
       if (subData == null) {
-        setState(() => _errorMessage = 'Failed to create auto-pay subscription. Please try again.');
+        setState(() => _errorMessage = AppLocalizations.of(context).failedToCreateAutoPaySubscription);
         return;
       }
 
@@ -282,6 +283,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
     final user = authState.valueOrNull?.user;
     final subscriptionAsync = ref.watch(mySubscriptionProvider);
@@ -321,7 +323,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
               const SizedBox(height: 32),
 
               Text(
-                'Subscription Expired',
+                l10n.subscriptionExpired,
                 style: context.textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.onSurface,
@@ -336,8 +338,8 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
 
               Text(
                 endDate != null
-                    ? 'Your subscription ended on ${endDate.day} ${_monthName(endDate.month)} ${endDate.year}. Renew now to continue using TezzPOS.'
-                    : 'Your subscription has expired. Renew now to continue using TezzPOS.',
+                    ? l10n.subscriptionEndedOn('${endDate.day} ${_monthName(endDate.month)} ${endDate.year}')
+                    : l10n.subscriptionExpiredMessage,
                 style: context.textTheme.bodyLarge?.copyWith(
                   color: AppColors.onSurfaceVariant,
                 ),
@@ -356,7 +358,9 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '$daysOverdue day${daysOverdue == 1 ? '' : 's'} overdue',
+                    daysOverdue == 1
+                        ? l10n.oneDayOverdue(daysOverdue.toString())
+                        : l10n.daysOverdue(daysOverdue.toString()),
                     style: context.textTheme.labelLarge?.copyWith(
                       color: AppColors.error,
                       fontWeight: FontWeight.w600,
@@ -403,21 +407,21 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Current Plan',
+                          l10n.currentPlan,
                           style: context.textTheme.labelSmall?.copyWith(
                             color: AppColors.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          plan?['name'] ?? 'Unknown Plan',
+                          plan?['name'] ?? l10n.unknownPlan,
                           style: context.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Billing: ${subscription['billingCycle'] ?? 'MONTHLY'}',
+                          l10n.billingLabel(subscription['billingCycle'] ?? 'MONTHLY'),
                           style: context.textTheme.bodySmall?.copyWith(
                             color: AppColors.onSurfaceVariant,
                           ),
@@ -429,7 +433,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
                               Icon(Icons.repeat, size: 14, color: AppColors.success),
                               const SizedBox(width: 4),
                               Text(
-                                'Auto-renew enabled',
+                                l10n.autoRenewEnabled,
                                 style: context.textTheme.labelSmall?.copyWith(color: AppColors.success),
                               ),
                             ],
@@ -442,13 +446,13 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
                       .fadeIn(delay: const Duration(milliseconds: 500));
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
 
               const SizedBox(height: 32),
 
               AppButton(
-                text: 'Renew Subscription',
+                text: l10n.renewSubscription,
                 isLoading: _isRenewing,
                 onPressed: _renewSubscription,
               )
@@ -471,13 +475,13 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       minimumSize: const Size(double.infinity, 48),
                     ),
-                    child: const Text('Enable Auto-Pay'),
+                    child: Text(l10n.enableAutoPay),
                   )
                       .animate()
                       .fadeIn(delay: const Duration(milliseconds: 700));
                 },
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
 
               const SizedBox(height: 12),
@@ -485,7 +489,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
               TextButton(
                 onPressed: _logout,
                 child: Text(
-                  'Sign Out',
+                  l10n.signOut,
                   style: context.textTheme.titleSmall?.copyWith(
                     color: AppColors.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -498,7 +502,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
               const Spacer(),
 
               Text(
-                'Need help? Contact support',
+                '${l10n.needHelp} ${l10n.contactSupport}',
                 style: context.textTheme.labelSmall?.copyWith(
                   color: AppColors.onSurfaceVariant,
                 ),

@@ -18,7 +18,7 @@ final superAdminRepositoryProvider = Provider<SuperAdminRepository>((ref) {
 });
 
 // Dashboard
-final superAdminDashboardStatsProvider = FutureProvider<SuperAdminDashboardStats>((ref) async {
+final superAdminDashboardStatsProvider = FutureProvider.autoDispose<SuperAdminDashboardStats>((ref) async {
   final repository = ref.watch(superAdminRepositoryProvider);
   final result = await repository.getDashboardStats();
   return result.fold(
@@ -46,7 +46,7 @@ class CompanyFilter {
   }
 }
 
-final companiesProvider = FutureProvider.family<List<Company>, CompanyFilter>((ref, filter) async {
+final companiesProvider = FutureProvider.autoDispose.family<List<Company>, CompanyFilter>((ref, filter) async {
   final repository = ref.watch(superAdminRepositoryProvider);
   final result = await repository.getCompanies(
     status: filter.status,
@@ -60,7 +60,7 @@ final companiesProvider = FutureProvider.family<List<Company>, CompanyFilter>((r
   );
 });
 
-final companyDetailProvider = FutureProvider.family<Company, String>((ref, id) async {
+final companyDetailProvider = FutureProvider.autoDispose.family<Company, String>((ref, id) async {
   final repository = ref.watch(superAdminRepositoryProvider);
   final result = await repository.getCompanyById(id);
   return result.fold(
@@ -70,7 +70,7 @@ final companyDetailProvider = FutureProvider.family<Company, String>((ref, id) a
 });
 
 // Plans
-final plansProvider = FutureProvider<List<Plan>>((ref) async {
+final plansProvider = FutureProvider.autoDispose<List<Plan>>((ref) async {
   final repository = ref.watch(superAdminRepositoryProvider);
   final result = await repository.getPlans();
   return result.fold(

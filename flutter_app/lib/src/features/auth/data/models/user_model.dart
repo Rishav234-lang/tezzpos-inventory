@@ -15,20 +15,22 @@ class UserModel extends User {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    final userData = json['user'] as Map<String, dynamic>? ?? {};
+    final userData = json['user'] as Map<String, dynamic>? ?? json;
     return UserModel(
-      id: userData['id'] ?? '',
-      email: userData['email'] ?? '',
-      name: userData['name'] ?? '',
-      role: userData['role'] ?? 'owner',
-      companyId: userData['companyId'],
-      companyName: userData['companyName'],
-      companyStatus: userData['companyStatus'],
-      token: json['token'] as String?,
-      subscriptionStatus: userData['subscriptionStatus'],
+      id: userData['id'] ?? json['id'] ?? '',
+      email: userData['email'] ?? json['email'] ?? '',
+      name: userData['name'] ?? json['name'] ?? '',
+      role: userData['role'] ?? json['role'] ?? 'owner',
+      companyId: userData['companyId'] ?? json['companyId'],
+      companyName: userData['companyName'] ?? json['companyName'],
+      companyStatus: userData['companyStatus'] ?? json['companyStatus'],
+      token: json['token'] as String? ?? userData['token'] as String?,
+      subscriptionStatus: userData['subscriptionStatus'] ?? json['subscriptionStatus'],
       subscriptionEndDate: userData['subscriptionEndDate'] != null
           ? DateTime.tryParse(userData['subscriptionEndDate'])
-          : null,
+          : (json['subscriptionEndDate'] != null
+              ? DateTime.tryParse(json['subscriptionEndDate'])
+              : null),
     );
   }
 

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 
 class CompanyLoginScreen extends ConsumerStatefulWidget {
   const CompanyLoginScreen({super.key});
@@ -55,6 +56,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
@@ -102,7 +104,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                   const SizedBox(height: 28),
 
                   Text(
-                    AppStrings.companyLoginTitle,
+                    l10n.companyLogin,
                     style: context.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.onSurface,
@@ -115,7 +117,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                   const SizedBox(height: 8),
 
                   Text(
-                    'Sign in to manage your store inventory and billing.',
+                    l10n.companyLoginSubtitle,
                     style: context.textTheme.bodyLarge?.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
@@ -127,18 +129,18 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
 
                   // Email field
                   AppTextField(
-                    label: 'Email',
-                    hint: 'owner@company.com',
+                    label: l10n.email,
+                    hint: l10n.emailHint,
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     prefixIcon: const Icon(Icons.email_outlined, color: AppColors.onSurfaceVariant),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Email is required';
+                        return l10n.emailRequired;
                       }
                       if (!value.contains('@')) {
-                        return 'Enter a valid email';
+                        return l10n.emailInvalid;
                       }
                       return null;
                     },
@@ -151,8 +153,8 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
 
                   // Password field
                   AppTextField(
-                    label: 'Password',
-                    hint: 'Enter your password',
+                    label: l10n.password,
+                    hint: l10n.passwordHint,
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
@@ -167,10 +169,10 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                     onFieldSubmitted: (_) => _login(),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Password is required';
+                        return l10n.passwordRequired;
                       }
                       if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                        return l10n.passwordMinLength('6');
                       }
                       return null;
                     },
@@ -187,7 +189,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                     child: TextButton(
                       onPressed: () => context.push(AppRoutes.forgotPassword),
                       child: Text(
-                        AppStrings.forgotPassword,
+                        l10n.forgotPassword,
                         style: context.textTheme.titleSmall?.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -202,7 +204,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
 
                   // Login button
                   AppButton(
-                    text: AppStrings.loginButton,
+                    text: l10n.login,
                     isLoading: authState.isLoading,
                     onPressed: _login,
                   )
@@ -219,7 +221,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'OR',
+                          l10n.or,
                           style: context.textTheme.labelSmall?.copyWith(
                             color: AppColors.onSurfaceVariant,
                           ),
@@ -238,7 +240,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                     child: TextButton.icon(
                       onPressed: () => context.push(AppRoutes.companyRegister),
                       icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
-                      label: const Text('Create New Account'),
+                      label: Text(l10n.createNewAccount),
                     ),
                   )
                       .animate()
@@ -251,7 +253,7 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                     child: TextButton.icon(
                       onPressed: () => context.pushReplacement(AppRoutes.superAdminLogin),
                       icon: const Icon(Icons.admin_panel_settings_rounded, size: 20),
-                      label: const Text('Login as Super Admin'),
+                      label: Text(l10n.loginAsSuperAdmin),
                     ),
                   )
                       .animate()

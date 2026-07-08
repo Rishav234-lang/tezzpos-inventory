@@ -755,7 +755,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         .read(customerNotifierProvider.notifier)
         .deleteCustomer(widget.customerId);
     if (!mounted) return;
-    ref.invalidate(customersProvider(CustomerFilter()));
+    ref.invalidate(customersProvider);
     context.pop();
     ScaffoldMessenger.of(
       context,

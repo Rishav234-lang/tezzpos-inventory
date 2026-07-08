@@ -19,7 +19,6 @@ class VendorsScreen extends ConsumerStatefulWidget {
 
 class _VendorsScreenState extends ConsumerState<VendorsScreen> {
   final _searchController = TextEditingController();
-  String? _searchQuery;
 
   @override
   void dispose() {
@@ -29,168 +28,173 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vendorsAsync = ref.watch(
-      vendorsProvider(VendorFilter(search: _searchQuery)),
-    );
+    final vendorsAsync = ref.watch(vendorsProvider);
 
     final count = vendorsAsync.valueOrNull?.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 112,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => context.go(AppRoutes.dashboard),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () => context.push(AppRoutes.addVendor),
-                tooltip: 'Create Supplier',
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(vendorsProvider),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 112,
+              pinned: true,
+              backgroundColor: AppColors.primary,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => context.go(AppRoutes.dashboard),
               ),
-              const SizedBox(width: 4),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () => context.push(AppRoutes.addVendor),
+                  tooltip: 'Create Supplier',
                 ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Suppliers',
-                          style: context.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                const SizedBox(width: 4),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Suppliers',
+                            style: context.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '$count suppliers',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
+                          Text(
+                            '$count suppliers',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.outline.withValues(alpha: 0.25),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(
-                    () => _searchQuery = value.isEmpty ? null : value,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Search supplier...',
-                    hintStyle: TextStyle(
-                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
-                      fontSize: 13,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: AppColors.onSurfaceVariant,
-                      size: 20,
-                    ),
-                    suffixIcon: _searchQuery != null
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            color: AppColors.onSurfaceVariant,
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = null);
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 13,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          vendorsAsync.when(
-            data: (vendors) {
-              if (vendors.isEmpty) {
-                return SliverFillRemaining(child: _buildEmptyState());
-              }
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: _VendorTile(
-                      vendor: vendors[index],
-                      onTap: () => context.push(
-                        '${AppRoutes.vendorDetail}/${vendors[index].id}',
+                        ],
                       ),
                     ),
                   ),
-                  childCount: vendors.length,
                 ),
-              );
-            },
-            loading: () => SliverToBoxAdapter(child: _buildShimmerList()),
-            error: (error, _) => SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: AppColors.error,
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.outline.withValues(alpha: 0.25),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Failed to load vendors',
-                      style: TextStyle(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      final current = ref.read(vendorFilterProvider);
+                      ref.read(vendorFilterProvider.notifier).state = current.copyWith(
+                        search: value.isEmpty ? null : value,
+                      );
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search supplier...',
+                      hintStyle: TextStyle(
+                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+                        fontSize: 13,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: AppColors.onSurfaceVariant,
+                        size: 20,
+                      ),
+                      suffixIcon: ref.watch(vendorFilterProvider).search != null
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              color: AppColors.onSurfaceVariant,
+                              onPressed: () {
+                                _searchController.clear();
+                                ref.read(vendorFilterProvider.notifier).state = VendorFilter();
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            vendorsAsync.when(
+              data: (vendors) {
+                if (vendors.isEmpty) {
+                  return SliverFillRemaining(child: _buildEmptyState());
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: _VendorTile(
+                        vendor: vendors[index],
+                        onTap: () => context.push(
+                          '${AppRoutes.vendorDetail}/${vendors[index].id}',
+                        ),
+                      ),
+                    ),
+                    childCount: vendors.length,
+                  ),
+                );
+              },
+              loading: () => SliverToBoxAdapter(child: _buildShimmerList()),
+              error: (error, _) => SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
                         color: AppColors.error,
-                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load vendors',
+                        style: TextStyle(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.addVendor),
@@ -205,7 +209,8 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
   }
 
   Widget _buildEmptyState() {
-    final isSearching = _searchQuery != null && _searchQuery!.isNotEmpty;
+    final filter = ref.watch(vendorFilterProvider);
+    final isSearching = filter.search != null && filter.search!.isNotEmpty;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -265,7 +270,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
               OutlinedButton.icon(
                 onPressed: () {
                   _searchController.clear();
-                  setState(() => _searchQuery = null);
+                  ref.read(vendorFilterProvider.notifier).state = VendorFilter();
                 },
                 icon: const Icon(Icons.clear, size: 18),
                 label: const Text('Clear Search'),

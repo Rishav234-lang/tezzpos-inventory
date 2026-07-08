@@ -419,9 +419,7 @@ class _AddEditVendorScreenState extends ConsumerState<AddEditVendorScreen> {
         ),
       );
     } else {
-      ref.invalidate(
-        vendorsProvider(VendorFilter(search: null, page: 1, limit: 20)),
-      );
+      ref.invalidate(vendorsProvider);
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

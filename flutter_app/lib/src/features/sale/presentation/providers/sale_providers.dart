@@ -15,8 +15,11 @@ final saleRepositoryProvider = Provider<SaleRepository>(
   (ref) => SaleRepositoryImpl(ref.watch(saleRemoteDataSourceProvider)),
 );
 
-final salesProvider = FutureProvider.family<List<Sale>, SaleFilter>(
-  (ref, filter) async {
+final saleFilterProvider = StateProvider<SaleFilter>((ref) => SaleFilter());
+
+final salesProvider = FutureProvider.autoDispose<List<Sale>>(
+  (ref) async {
+    final filter = ref.watch(saleFilterProvider);
     final repository = ref.watch(saleRepositoryProvider);
     final result = await repository.getSales(
       customerId: filter.customerId,
@@ -34,7 +37,7 @@ final salesProvider = FutureProvider.family<List<Sale>, SaleFilter>(
   },
 );
 
-final saleDetailProvider = FutureProvider.family<Sale, String>(
+final saleDetailProvider = FutureProvider.autoDispose.family<Sale, String>(
   (ref, id) async {
     final repository = ref.watch(saleRepositoryProvider);
     final result = await repository.getSaleById(id);
@@ -45,7 +48,7 @@ final saleDetailProvider = FutureProvider.family<Sale, String>(
   },
 );
 
-final saleReturnsProvider = FutureProvider.family<List<SaleReturn>, SaleReturnFilter>(
+final saleReturnsProvider = FutureProvider.autoDispose.family<List<SaleReturn>, SaleReturnFilter>(
   (ref, filter) async {
     final repository = ref.watch(saleRepositoryProvider);
     final result = await repository.getSaleReturns(page: filter.page, limit: filter.limit);
@@ -56,7 +59,7 @@ final saleReturnsProvider = FutureProvider.family<List<SaleReturn>, SaleReturnFi
   },
 );
 
-final saleReturnDetailProvider = FutureProvider.family<SaleReturn, String>(
+final saleReturnDetailProvider = FutureProvider.autoDispose.family<SaleReturn, String>(
   (ref, id) async {
     final repository = ref.watch(saleRepositoryProvider);
     final result = await repository.getSaleReturnById(id);

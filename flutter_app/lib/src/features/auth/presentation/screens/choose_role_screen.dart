@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 
 class ChooseRoleScreen extends StatefulWidget {
   const ChooseRoleScreen({super.key});
@@ -16,6 +17,7 @@ class ChooseRoleScreen extends StatefulWidget {
 class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -59,7 +61,7 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
 
                 // Title
                 Text(
-                  AppStrings.chooseRoleTitle,
+                  l10n.welcomeToApp(l10n.appName),
                   style: context.textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.onSurface,
@@ -74,7 +76,7 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
 
                 // Subtitle
                 Text(
-                  AppStrings.chooseRoleSubtitle,
+                  l10n.selectRoleToContinue,
                   style: context.textTheme.bodyLarge?.copyWith(
                     color: AppColors.onSurfaceVariant,
                   ),
@@ -87,8 +89,8 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
 
                 // Role cards
                 _RoleCard(
-                  title: AppStrings.companyOwner,
-                  description: 'Manage inventory, sales, purchases & billing for your store.',
+                  title: l10n.companyOwner,
+                  description: l10n.companyOwnerDescription,
                   icon: Icons.storefront_rounded,
                   gradient: AppColors.primaryGradient,
                   onTap: () => context.push(AppRoutes.companyLogin),
@@ -100,8 +102,8 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
                 const SizedBox(height: 16),
 
                 _RoleCard(
-                  title: AppStrings.superAdmin,
-                  description: 'Manage companies, plans, subscriptions & platform analytics.',
+                  title: l10n.superAdmin,
+                  description: l10n.superAdminDescription,
                   icon: Icons.admin_panel_settings_rounded,
                   gradient: AppColors.secondaryGradient,
                   onTap: () => context.push(AppRoutes.superAdminLogin),

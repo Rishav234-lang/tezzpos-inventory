@@ -412,7 +412,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
       return;
     }
 
-    ref.invalidate(customersProvider(CustomerFilter()));
+    ref.invalidate(customersProvider);
     if (isEdit) ref.invalidate(customerDetailProvider(widget.customerId!));
     context.pop();
     _showSnack(isEdit ? 'Customer updated' : 'Customer created');

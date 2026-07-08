@@ -23,7 +23,6 @@ class PurchaseListScreen extends ConsumerStatefulWidget {
 class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
-  PurchaseFilter _filter = const PurchaseFilter();
   int _currentPage = 1;
   Vendor? _selectedVendor;
   DateTime? _startDate;
@@ -37,93 +36,94 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   }
 
   void _applySearch(String value) {
-    setState(() {
-      _currentPage = 1;
-      // Backend doesn't support search yet, but we keep the UI ready
-    });
+    setState(() => _currentPage = 1);
+    // Backend doesn't support search yet, but we keep the UI ready
   }
 
   void _applyStatusFilter({String? status}) {
-    setState(() {
-      _currentPage = 1;
-      _filter = _filter.copyWith(status: status);
-    });
+    _currentPage = 1;
+    final current = ref.read(purchaseFilterProvider);
+    ref.read(purchaseFilterProvider.notifier).state = current.copyWith(status: status);
+    setState(() {});
   }
 
   void _applyVendorFilter(Vendor? vendor) {
-    setState(() {
-      _currentPage = 1;
-      _selectedVendor = vendor;
-      _filter = _filter.copyWith(vendorId: vendor?.id);
-    });
+    _currentPage = 1;
+    _selectedVendor = vendor;
+    final current = ref.read(purchaseFilterProvider);
+    ref.read(purchaseFilterProvider.notifier).state = current.copyWith(vendorId: vendor?.id);
+    setState(() {});
   }
 
   void _applyDateFilter(DateTime? start, DateTime? end) {
-    setState(() {
-      _currentPage = 1;
-      _startDate = start;
-      _endDate = end;
-      _filter = _filter.copyWith(
-        startDate: start != null ? DateFormat('yyyy-MM-dd').format(start) : null,
-        endDate: end != null ? DateFormat('yyyy-MM-dd').format(end) : null,
-      );
-    });
+    _currentPage = 1;
+    _startDate = start;
+    _endDate = end;
+    final current = ref.read(purchaseFilterProvider);
+    ref.read(purchaseFilterProvider.notifier).state = current.copyWith(
+      startDate: start != null ? DateFormat('yyyy-MM-dd').format(start) : null,
+      endDate: end != null ? DateFormat('yyyy-MM-dd').format(end) : null,
+    );
+    setState(() {});
   }
 
   void _toggleSortOrder() {
-    setState(() {
-      _currentPage = 1;
-      final newOrder = _filter.sortOrder == 'desc' ? 'asc' : 'desc';
-      _filter = _filter.copyWith(sortOrder: newOrder);
-    });
+    _currentPage = 1;
+    final current = ref.read(purchaseFilterProvider);
+    final newOrder = current.sortOrder == 'desc' ? 'asc' : 'desc';
+    ref.read(purchaseFilterProvider.notifier).state = current.copyWith(sortOrder: newOrder);
+    setState(() {});
   }
 
   void _clearFilters() {
-    setState(() {
-      _currentPage = 1;
-      _selectedVendor = null;
-      _startDate = null;
-      _endDate = null;
-      _filter = const PurchaseFilter();
-    });
+    _currentPage = 1;
+    _selectedVendor = null;
+    _startDate = null;
+    _endDate = null;
+    ref.read(purchaseFilterProvider.notifier).state = const PurchaseFilter();
+    setState(() {});
   }
 
   void _goToPage(int page) {
-    setState(() {
-      _currentPage = page;
-      _filter = _filter.copyWith(page: page);
-    });
+    _currentPage = page;
+    final current = ref.read(purchaseFilterProvider);
+    ref.read(purchaseFilterProvider.notifier).state = current.copyWith(page: page);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final purchasesAsync = ref.watch(purchasesProvider(_filter));
+    final purchasesAsync = ref.watch(purchasesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildAppBar(context)),
-            SliverToBoxAdapter(child: _buildSummaryCards(purchasesAsync)),
-            SliverToBoxAdapter(child: _buildSearchBar(context)),
-            SliverToBoxAdapter(child: _buildFilterChips(context)),
-            purchasesAsync.when(
-              data: (data) {
-                final purchases = _extractPurchases(data);
-                final pagination = data['pagination'] as Map<String, dynamic>?;
-                return _buildPurchaseList(context, purchases, pagination);
-              },
-              loading: () => SliverToBoxAdapter(child: _buildShimmer(context)),
-              error: (error, _) => SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text('Error: $error', style: TextStyle(color: AppColors.error)),
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(purchasesProvider),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(child: _buildAppBar(context)),
+              SliverToBoxAdapter(child: _buildSummaryCards(purchasesAsync)),
+              SliverToBoxAdapter(child: _buildSearchBar(context)),
+              SliverToBoxAdapter(child: _buildFilterChips(context)),
+              purchasesAsync.when(
+                data: (data) {
+                  final purchases = _extractPurchases(data);
+                  final pagination = data['pagination'] as Map<String, dynamic>?;
+                  return _buildPurchaseList(context, purchases, pagination);
+                },
+                loading: () => SliverToBoxAdapter(child: _buildShimmer(context)),
+                error: (error, _) => SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('Error: $error', style: TextStyle(color: AppColors.error)),
+                  ),
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -264,10 +264,11 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   }
 
   Widget _buildFilterChips(BuildContext context) {
-    final hasActiveFilters = _filter.status != null ||
-        _filter.vendorId != null ||
-        _filter.startDate != null ||
-        _filter.sortOrder != 'desc';
+    final filter = ref.watch(purchaseFilterProvider);
+    final hasActiveFilters = filter.status != null ||
+        filter.vendorId != null ||
+        filter.startDate != null ||
+        filter.sortOrder != 'desc';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -277,25 +278,25 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
           _FilterChip(
             label: _dateFilterLabel(),
             icon: Icons.calendar_today_outlined,
-            isActive: _filter.startDate != null,
+            isActive: filter.startDate != null,
             onTap: () => _showDateFilter(context),
           ),
           _FilterChip(
             label: _vendorFilterLabel(),
             icon: Icons.person_outline,
-            isActive: _filter.vendorId != null,
+            isActive: filter.vendorId != null,
             onTap: () => _showVendorFilter(context),
           ),
           _FilterChip(
             label: _statusFilterLabel(),
             icon: Icons.verified_outlined,
-            isActive: _filter.status != null,
+            isActive: filter.status != null,
             onTap: () => _showStatusFilter(context),
           ),
           _FilterChip(
-            label: _filter.sortOrder == 'desc' ? 'Newest' : 'Oldest',
-            icon: _filter.sortOrder == 'desc' ? Icons.arrow_downward : Icons.arrow_upward,
-            isActive: _filter.sortOrder != 'desc',
+            label: filter.sortOrder == 'desc' ? 'Newest' : 'Oldest',
+            icon: filter.sortOrder == 'desc' ? Icons.arrow_downward : Icons.arrow_upward,
+            isActive: filter.sortOrder != 'desc',
             onTap: _toggleSortOrder,
           ),
           if (hasActiveFilters)
@@ -324,8 +325,9 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   }
 
   String _statusFilterLabel() {
-    if (_filter.status == null) return 'Status';
-    return _filter.status!.capitalize;
+    final filter = ref.watch(purchaseFilterProvider);
+    if (filter.status == null) return 'Status';
+    return filter.status!.capitalize;
   }
 
   void _showDateFilter(BuildContext context) async {
@@ -380,6 +382,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
   }
 
   void _showStatusFilter(BuildContext context) {
+    final filter = ref.watch(purchaseFilterProvider);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -393,7 +396,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
             children: [
               ListTile(
                 title: const Text('All'),
-                trailing: _filter.status == null || _filter.status!.isEmpty
+                trailing: filter.status == null || filter.status!.isEmpty
                     ? const Icon(Icons.check, color: AppColors.primary)
                     : null,
                 onTap: () {
@@ -403,7 +406,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
               ),
               ListTile(
                 title: const Text('Paid'),
-                trailing: _filter.status == 'PAID'
+                trailing: filter.status == 'PAID'
                     ? const Icon(Icons.check, color: AppColors.primary)
                     : null,
                 onTap: () {
@@ -413,7 +416,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
               ),
               ListTile(
                 title: const Text('Partial'),
-                trailing: _filter.status == 'PARTIAL'
+                trailing: filter.status == 'PARTIAL'
                     ? const Icon(Icons.check, color: AppColors.primary)
                     : null,
                 onTap: () {
@@ -423,7 +426,7 @@ class _PurchaseListScreenState extends ConsumerState<PurchaseListScreen> {
               ),
               ListTile(
                 title: const Text('Unpaid'),
-                trailing: _filter.status == 'UNPAID'
+                trailing: filter.status == 'UNPAID'
                     ? const Icon(Icons.check, color: AppColors.primary)
                     : null,
                 onTap: () {

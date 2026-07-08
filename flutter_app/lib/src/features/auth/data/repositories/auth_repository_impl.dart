@@ -120,6 +120,11 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User?>> getCurrentUser() async {
     try {
+      final remoteUser = await remoteDataSource.getCurrentUser();
+      await _saveUser(remoteUser);
+      _authStateController.add(AuthState(user: remoteUser.toEntity()));
+      return Right(remoteUser.toEntity());
+    } on Failure catch (_) {
       final cachedUser = await localDataSource.getCachedUser();
       if (cachedUser != null) {
         return Right(cachedUser.toEntity());

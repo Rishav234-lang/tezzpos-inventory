@@ -22,10 +22,21 @@ class InventoryDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: productAsync.when(
-        data: (product) => _buildContent(context, ref, product),
-        loading: () => _buildShimmer(context),
-        error: (e, _) => Center(child: Text('Error: $e')),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(productDetailProvider(productId)),
+        child: productAsync.when(
+          data: (product) => _buildContent(context, ref, product),
+          loading: () => _buildShimmer(context),
+          error: (e, _) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
+          ),
+        ),
       ),
       bottomNavigationBar: productAsync.when(
         data: (product) => _buildBottomBar(context, product),
@@ -388,12 +399,12 @@ class InventoryDetailScreen extends ConsumerWidget {
         children: [
           _OverviewRow(
             label: 'Low Stock Level',
-            value: '${product.minStockLevel} pcs',
+            value: '${product.minStockLevel} ${product.unit.toLowerCase()}',
           ),
           const Divider(height: 20),
           _OverviewRow(
             label: 'In Stock',
-            value: '${product.totalStock} pcs',
+            value: '${product.totalStock} ${product.unit.toLowerCase()}',
             valueColor: const Color(0xFF388E3C),
           ),
           const Divider(height: 20),

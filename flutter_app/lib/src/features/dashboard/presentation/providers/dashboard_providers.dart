@@ -37,7 +37,7 @@ class DashboardDateFilter {
 }
 
 final dashboardStatsProvider =
-    FutureProvider.family<DashboardStats, DashboardDateFilter>((
+    FutureProvider.autoDispose.family<DashboardStats, DashboardDateFilter>((
       ref,
       filter,
     ) async {
@@ -53,7 +53,7 @@ final dashboardStatsProvider =
     });
 
 final recentSalesProvider =
-    FutureProvider.family<List<RecentTransaction>, DashboardDateFilter>((
+    FutureProvider.autoDispose.family<List<RecentTransaction>, DashboardDateFilter>((
       ref,
       filter,
     ) async {
@@ -69,7 +69,7 @@ final recentSalesProvider =
     });
 
 final recentPurchasesProvider =
-    FutureProvider.family<List<RecentTransaction>, DashboardDateFilter>((
+    FutureProvider.autoDispose.family<List<RecentTransaction>, DashboardDateFilter>((
       ref,
       filter,
     ) async {
@@ -85,7 +85,7 @@ final recentPurchasesProvider =
     });
 
 final topSellingProductsProvider =
-    FutureProvider.family<List<TopSellingProduct>, DashboardDateFilter>((
+    FutureProvider.autoDispose.family<List<TopSellingProduct>, DashboardDateFilter>((
       ref,
       filter,
     ) async {
@@ -100,7 +100,7 @@ final topSellingProductsProvider =
       );
     });
 
-final dailySalesChartProvider = FutureProvider<List<ChartDataPoint>>((
+final dailySalesChartProvider = FutureProvider.autoDispose<List<ChartDataPoint>>((
   ref,
 ) async {
   final repository = ref.watch(dashboardRepositoryProvider);

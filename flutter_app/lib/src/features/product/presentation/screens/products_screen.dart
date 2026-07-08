@@ -25,8 +25,6 @@ class ProductsScreen extends ConsumerStatefulWidget {
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   final _searchController = TextEditingController();
   final _debouncer = Debouncer(milliseconds: 300);
-  String? _selectedCategoryId;
-  final int _currentPage = 1;
 
   @override
   void dispose() {
@@ -37,118 +35,115 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filter = ProductFilter(
-      search: _searchController.text.trim().isEmpty
-          ? null
-          : _searchController.text.trim(),
-      categoryId: _selectedCategoryId,
-      page: _currentPage,
-    );
-    final productsAsync = ref.watch(productsProvider(filter));
+    final productsAsync = ref.watch(productsProvider);
     final categoriesAsync = ref.watch(categoriesProvider(''));
 
     final totalCount = productsAsync.valueOrNull?.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 112,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => context.go(AppRoutes.dashboard),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () => context.push(AppRoutes.addProduct),
-                tooltip: 'Create Product',
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(productsProvider),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 112,
+              pinned: true,
+              backgroundColor: AppColors.primary,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => context.go(AppRoutes.dashboard),
               ),
-              const SizedBox(width: 4),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () => context.push(AppRoutes.addProduct),
+                  tooltip: 'Create Product',
                 ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Products',
-                          style: context.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          _selectedCategoryId == null
-                              ? '$totalCount products'
-                              : '$totalCount in selected category',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 4),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSearchBar(),
-                  const SizedBox(height: 12),
-                  _buildCategoryChips(categoriesAsync),
-                  const SizedBox(height: 8),
-                  productsAsync.when(
-                    data: (products) => _buildProductList(products),
-                    loading: () => _buildShimmerList(),
-                    error: (error, _) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 48),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: AppColors.error,
-                              size: 48,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Products',
+                            style: context.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Failed to load products',
-                              style: TextStyle(
-                                color: AppColors.error,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          ),
+                          Text(
+                            ref.watch(productFilterProvider).categoryId == null
+                                ? '$totalCount products'
+                                : '$totalCount in selected category',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSearchBar(),
+                    const SizedBox(height: 12),
+                    _buildCategoryChips(categoriesAsync),
+                    const SizedBox(height: 8),
+                    productsAsync.when(
+                      data: (products) => _buildProductList(products),
+                      loading: () => _buildShimmerList(),
+                      error: (error, _) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 48),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: AppColors.error,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Failed to load products',
+                                style: TextStyle(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.addProduct),
@@ -179,7 +174,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: (value) {
-          _debouncer.run(() => setState(() {}));
+          _debouncer.run(() {
+            final current = ref.read(productFilterProvider);
+            ref.read(productFilterProvider.notifier).state = current.copyWith(
+              search: value.trim().isEmpty ? null : value.trim(),
+            );
+          });
         },
         decoration: InputDecoration(
           hintText: 'Search product...',
@@ -198,7 +198,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   color: AppColors.onSurfaceVariant,
                   onPressed: () {
                     _searchController.clear();
-                    setState(() {});
+                    ref.read(productFilterProvider.notifier).state = ProductFilter();
                   },
                 )
               : null,
@@ -233,14 +233,15 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   }
 
   Widget _buildChip(String label, String? categoryId) {
-    final isSelected = _selectedCategoryId == categoryId;
+    final isSelected = ref.watch(productFilterProvider).categoryId == categoryId;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Text(label),
         selected: isSelected,
         onSelected: (_) {
-          setState(() => _selectedCategoryId = categoryId);
+          final current = ref.read(productFilterProvider);
+          ref.read(productFilterProvider.notifier).state = current.copyWith(categoryId: categoryId);
         },
         selectedColor: AppColors.primary.withValues(alpha: 0.15),
         checkmarkColor: AppColors.primary,
@@ -254,8 +255,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   Widget _buildProductList(List<Product> products) {
     if (products.isEmpty) {
-      final isSearching =
-          _searchController.text.isNotEmpty || _selectedCategoryId != null;
+      final filter = ref.watch(productFilterProvider);
+      final isSearching = filter.search != null || filter.categoryId != null;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 60),
         child: Center(
@@ -313,10 +314,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 )
               else
                 OutlinedButton.icon(
-                  onPressed: () => setState(() {
+                  onPressed: () {
                     _searchController.clear();
-                    _selectedCategoryId = null;
-                  }),
+                    ref.read(productFilterProvider.notifier).state = ProductFilter();
+                  },
                   icon: const Icon(Icons.clear, size: 18),
                   label: const Text('Clear Filters'),
                   style: OutlinedButton.styleFrom(

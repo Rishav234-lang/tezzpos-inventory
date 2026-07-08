@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../../generated/l10n/app_localizations.dart';
 
 class SuperAdminLoginScreen extends ConsumerStatefulWidget {
   const SuperAdminLoginScreen({super.key});
@@ -55,6 +56,7 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
@@ -104,7 +106,7 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                   const SizedBox(height: 28),
 
                   Text(
-                    AppStrings.superAdminLoginTitle,
+                    l10n.superAdminLogin,
                     style: context.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.onSurface,
@@ -117,7 +119,7 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                   const SizedBox(height: 8),
 
                   Text(
-                    'Platform administration access.',
+                    l10n.superAdminLoginSubtitle,
                     style: context.textTheme.bodyLarge?.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
@@ -128,15 +130,15 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                   const SizedBox(height: 40),
 
                   AppTextField(
-                    label: 'Email',
-                    hint: 'admin@tezzpos.com',
+                    label: l10n.email,
+                    hint: l10n.adminEmailHint,
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     prefixIcon: const Icon(Icons.email_outlined, color: AppColors.onSurfaceVariant),
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'Email is required';
-                      if (!value.contains('@')) return 'Enter a valid email';
+                      if (value == null || value.isEmpty) return l10n.emailRequired;
+                      if (!value.contains('@')) return l10n.emailInvalid;
                       return null;
                     },
                   )
@@ -147,8 +149,8 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                   const SizedBox(height: 20),
 
                   AppTextField(
-                    label: 'Password',
-                    hint: 'Enter your password',
+                    label: l10n.password,
+                    hint: l10n.passwordHint,
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
@@ -162,8 +164,8 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                     ),
                     onFieldSubmitted: (_) => _login(),
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'Password is required';
-                      if (value.length < 6) return 'Password must be at least 6 characters';
+                      if (value == null || value.isEmpty) return l10n.passwordRequired;
+                      if (value.length < 6) return l10n.passwordMinLength('6');
                       return null;
                     },
                   )
@@ -174,7 +176,7 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                   const SizedBox(height: 32),
 
                   AppButton(
-                    text: AppStrings.loginButton,
+                    text: l10n.login,
                     isLoading: authState.isLoading,
                     backgroundColor: AppColors.secondary,
                     onPressed: _login,
@@ -191,7 +193,7 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'OR',
+                          l10n.or,
                           style: context.textTheme.labelSmall?.copyWith(
                             color: AppColors.onSurfaceVariant,
                           ),
@@ -209,7 +211,7 @@ class _SuperAdminLoginScreenState extends ConsumerState<SuperAdminLoginScreen> {
                     child: TextButton.icon(
                       onPressed: () => context.pushReplacement(AppRoutes.companyLogin),
                       icon: const Icon(Icons.storefront_rounded, size: 20),
-                      label: const Text('Login as Company Owner'),
+                      label: Text(l10n.loginAsCompanyOwner),
                     ),
                   )
                       .animate()

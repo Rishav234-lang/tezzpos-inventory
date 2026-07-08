@@ -9,7 +9,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 
-final _batchDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, batchId) async {
+final _batchDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, batchId) async {
   final dio = ref.watch(dioProvider).dio;
   final response = await dio.get('${ApiConstants.inventoryBatches}/$batchId');
   return response.data as Map<String, dynamic>;
@@ -50,10 +50,21 @@ class BatchDetailScreen extends ConsumerWidget {
         backgroundColor: AppColors.surface,
         elevation: 0,
       ),
-      body: batchAsync.when(
-        data: (data) => _buildContent(context, data),
-        loading: () => _buildShimmer(),
-        error: (e, _) => Center(child: Text('Error: $e')),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(_batchDetailProvider(batchId)),
+        child: batchAsync.when(
+          data: (data) => _buildContent(context, data),
+          loading: () => _buildShimmer(),
+          error: (e, _) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -70,6 +81,7 @@ class BatchDetailScreen extends ConsumerWidget {
     final purchasePrice = _toDouble(batch['purchasePrice']);
     final mrp = _toDouble(batch['mrp']);
     final product = batch['product'] as Map<String, dynamic>?;
+    final unit = (product?['unit'] as String?)?.toLowerCase() ?? 'pcs';
     final vendor = batch['vendor'] as Map<String, dynamic>?;
     final purchase = batch['purchase'] as Map<String, dynamic>?;
     final saleItems = (batch['saleItems'] as List<dynamic>?) ?? [];
@@ -103,9 +115,9 @@ class BatchDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           _buildInfoCard(context, product, vendor, purchase, purchaseDate),
           const SizedBox(height: 16),
-          _buildMetricsCard(context, purchasePrice, mrp, expiryDate, expiryColor, purchasedQty, availableQty, soldQty),
+          _buildMetricsCard(context, purchasePrice, mrp, expiryDate, expiryColor, purchasedQty, availableQty, soldQty, unit),
           const SizedBox(height: 16),
-          _buildStockMovementCard(context, dateTimeFormat, saleItems, currency),
+          _buildStockMovementCard(context, dateTimeFormat, saleItems, currency, unit),
           if (createdAt != null) ...[
             const SizedBox(height: 16),
             _buildInfoRow(context, 'Created On', dateTimeFormat.format(createdAt)),
@@ -199,6 +211,7 @@ class BatchDetailScreen extends ConsumerWidget {
     int purchasedQty,
     int availableQty,
     int soldQty,
+    String unit,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -225,9 +238,9 @@ class BatchDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _MetricBox(label: 'Purchased Qty', value: '$purchasedQty pcs'),
-              _MetricBox(label: 'Available Qty', value: '$availableQty pcs', valueColor: const Color(0xFF388E3C)),
-              _MetricBox(label: 'Sold Qty', value: '$soldQty pcs'),
+              _MetricBox(label: 'Purchased Qty', value: '$purchasedQty $unit'),
+              _MetricBox(label: 'Available Qty', value: '$availableQty $unit', valueColor: const Color(0xFF388E3C)),
+              _MetricBox(label: 'Sold Qty', value: '$soldQty $unit'),
             ],
           ),
         ],
@@ -240,6 +253,7 @@ class BatchDetailScreen extends ConsumerWidget {
     DateFormat dateTimeFormat,
     List<dynamic> saleItems,
     NumberFormat currency,
+    String unit,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -288,7 +302,7 @@ class BatchDetailScreen extends ConsumerWidget {
                     style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),
                   trailing: Text(
-                    '-$quantity pcs',
+                    '-$quantity $unit',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.error),
                   ),
                 );
@@ -318,11 +332,12 @@ class BatchDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildShimmer() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.surface,
-      highlightColor: AppColors.background,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      child: Shimmer.fromColors(
+        baseColor: AppColors.surface,
+        highlightColor: AppColors.background,
         child: Column(
           children: [
             Container(height: 90, decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16))),

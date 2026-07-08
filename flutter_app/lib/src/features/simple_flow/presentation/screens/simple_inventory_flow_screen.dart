@@ -695,7 +695,7 @@ class _SimpleInventoryFlowScreenState
             'mobile': updated.mobile.isEmpty ? null : updated.mobile,
             'status': 'ACTIVE',
           });
-      ref.invalidate(vendorsProvider(VendorFilter(limit: 200)));
+      ref.invalidate(allVendorsProvider);
       setState(() {
         final index = _localSuppliers.indexWhere(
           (item) => item.id == supplier.id,
@@ -736,7 +736,7 @@ class _SimpleInventoryFlowScreenState
             'mobile': supplier.mobile.isEmpty ? null : supplier.mobile,
             'status': 'ACTIVE',
           });
-      ref.invalidate(vendorsProvider(VendorFilter(limit: 200)));
+      ref.invalidate(allVendorsProvider);
       return _Supplier(
         id: vendor.id,
         name: vendor.name,
@@ -757,7 +757,7 @@ class _SimpleInventoryFlowScreenState
             'mobile': customer.mobile.isEmpty ? null : customer.mobile,
             'status': 'ACTIVE',
           });
-      ref.invalidate(customersProvider(CustomerFilter(limit: 200)));
+      ref.invalidate(allCustomersProvider);
       return _Customer(
         id: saved.id,
         name: saved.name,
@@ -790,7 +790,7 @@ class _SimpleInventoryFlowScreenState
             'description': product.description,
             'status': 'ACTIVE',
           });
-      ref.invalidate(productsProvider(ProductFilter(limit: 200)));
+      ref.invalidate(allProductsProvider);
       return saved;
     } catch (e) {
       _showMessage('Product not saved: $e');
@@ -866,8 +866,8 @@ class _SimpleInventoryFlowScreenState
     }
 
     final newStock = oldStock + quantity;
-    ref.invalidate(productsProvider(ProductFilter(limit: 200)));
-    ref.invalidate(purchasesProvider(const PurchaseFilter()));
+    ref.invalidate(allProductsProvider);
+    ref.invalidate(purchasesProvider);
 
     setState(() {
       _stock[product] = newStock;
@@ -909,6 +909,7 @@ class _SimpleInventoryFlowScreenState
 
     final dueText = due > 0 ? ' Supplier due: ${due.toStringAsFixed(0)}.' : '';
     _showMessage('Purchase saved. Stock: $oldStock to $newStock.$dueText');
+    if (mounted) context.go(AppRoutes.inventory);
   }
 
   Future<void> _saveSale() async {
@@ -966,8 +967,8 @@ class _SimpleInventoryFlowScreenState
       return;
     }
 
-    ref.invalidate(productsProvider(ProductFilter(limit: 200)));
-    ref.invalidate(salesProvider(SaleFilter()));
+    ref.invalidate(allProductsProvider);
+    ref.invalidate(salesProvider);
     setState(() {
       _stock[product] = newStock;
       _selectedSaleProduct = null;
@@ -983,6 +984,7 @@ class _SimpleInventoryFlowScreenState
     _showMessage(
       'Sale saved. Stock: $available to $newStock. Paid: ${paidAmount.toStringAsFixed(0)}.$dueText',
     );
+    if (mounted) context.go(AppRoutes.inventory);
   }
 
   void _showMessage(String message) {
@@ -993,13 +995,9 @@ class _SimpleInventoryFlowScreenState
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(
-      productsProvider(ProductFilter(limit: 200)),
-    );
-    final suppliersAsync = ref.watch(vendorsProvider(VendorFilter(limit: 200)));
-    final customersAsync = ref.watch(
-      customersProvider(CustomerFilter(limit: 200)),
-    );
+    final productsAsync = ref.watch(allProductsProvider);
+    final suppliersAsync = ref.watch(allVendorsProvider);
+    final customersAsync = ref.watch(allCustomersProvider);
     final backendProducts =
         productsAsync.valueOrNull ?? const <product_entity.Product>[];
     final backendSuppliers =
@@ -1046,9 +1044,9 @@ class _SimpleInventoryFlowScreenState
             ? _LoadFailedView(
                 message: 'Unable to load backend data.\n$loadError',
                 onRetry: () {
-                  ref.invalidate(productsProvider(ProductFilter(limit: 200)));
-                  ref.invalidate(vendorsProvider(VendorFilter(limit: 200)));
-                  ref.invalidate(customersProvider(CustomerFilter(limit: 200)));
+                  ref.invalidate(allProductsProvider);
+                  ref.invalidate(allVendorsProvider);
+                  ref.invalidate(allCustomersProvider);
                 },
               )
             : isLoading && _step != _SimpleFlowStep.choose

@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../vendor/domain/entities/vendor.dart';
 import '../providers/purchase_providers.dart';
+import '../../../product/presentation/providers/product_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../widgets/purchase_pickers.dart';
 
 class PurchaseItemForm {
@@ -308,7 +311,15 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
                 ? 'Purchase duplicated successfully'
                 : 'Purchase created successfully';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-        context.pop();
+        ref.invalidate(purchasesProvider);
+        ref.invalidate(productsProvider);
+        ref.invalidate(dashboardStatsProvider);
+        if (_isEditing) {
+          ref.invalidate(purchaseDetailProvider(widget.purchaseId!));
+          context.pop();
+        } else {
+          context.go(AppRoutes.inventory);
+        }
       },
       error: (err, _) => _showError(err.toString()),
     );

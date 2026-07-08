@@ -14,7 +14,10 @@ final purchaseRepositoryProvider = Provider<PurchaseRepository>((ref) {
   return PurchaseRepositoryImpl(ref.watch(purchaseRemoteDataSourceProvider));
 });
 
-final purchasesProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, PurchaseFilter>((ref, filter) async {
+final purchaseFilterProvider = StateProvider<PurchaseFilter>((ref) => const PurchaseFilter());
+
+final purchasesProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final filter = ref.watch(purchaseFilterProvider);
   final repository = ref.watch(purchaseRepositoryProvider);
   final result = await repository.getPurchases(
     page: filter.page,

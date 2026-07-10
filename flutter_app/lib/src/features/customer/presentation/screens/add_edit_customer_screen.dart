@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customer_providers.dart';
 
@@ -95,6 +96,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                   child: TextField(
                     controller: _mobileController,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: phoneNumberInputFormatters(),
                     decoration: _inputDecoration('Optional'),
                   ),
                 ),

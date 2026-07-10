@@ -10,6 +10,13 @@ const path = require('path');
 const fs = require('fs');
 const prismaPlugin = require('./prisma');
 
+const TRIAL_DAYS = 3;
+
+function effectiveTrialEndDate(subscription) {
+  if (!subscription || subscription.status !== 'TRIAL') return subscription?.endDate;
+  return new Date(subscription.startDate.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+}
+
 const registerPlugins = async (app) => {
   // In-memory subscription cache: Map<companyId, { status, expiresAt (epoch ms) }>
   const subscriptionCache = new Map();
@@ -135,7 +142,7 @@ const registerPlugins = async (app) => {
       } else {
         const subscription = await app.prisma.companySubscription.findUnique({
           where: { companyId },
-          select: { status: true, endDate: true },
+          select: { status: true, startDate: true, endDate: true },
         });
 
         // No subscription = grace period / trial mode, allow access
@@ -145,7 +152,8 @@ const registerPlugins = async (app) => {
         }
 
         // Auto-expire if end date passed
-        const effectiveStatus = subscription.endDate < new Date() && (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL')
+        const endDate = effectiveTrialEndDate(subscription);
+        const effectiveStatus = endDate < new Date() && (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL')
           ? 'EXPIRED'
           : subscription.status;
 

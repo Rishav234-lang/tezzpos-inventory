@@ -22,16 +22,19 @@ async function main() {
 
   // Create Plans
   const plans = [
+    { id: 'free-trial-3-days', name: 'Free Trial - 3 Days', monthlyPrice: 0, yearlyPrice: 0, description: 'Try TezzPOS free for 3 days.', status: 'ACTIVE' },
     { name: 'Starter', monthlyPrice: 199, yearlyPrice: 1999, description: 'For small businesses', status: 'ACTIVE' },
     { name: 'Business', monthlyPrice: 499, yearlyPrice: 4999, description: 'For growing businesses', status: 'ACTIVE' },
     { name: 'Enterprise', monthlyPrice: 999, yearlyPrice: 9999, description: 'For large businesses', status: 'ACTIVE' },
   ];
 
   for (const plan of plans) {
+    const { id, ...planData } = plan;
+    const planId = id || plan.name.toLowerCase();
     await prisma.plan.upsert({
-      where: { id: plan.name.toLowerCase() },
-      update: plan,
-      create: { id: plan.name.toLowerCase(), ...plan },
+      where: { id: planId },
+      update: planData,
+      create: { id: planId, ...planData },
     });
   }
   console.log('Plans created');

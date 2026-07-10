@@ -8,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../purchase/presentation/providers/purchase_providers.dart';
 import '../../domain/entities/vendor.dart';
 import '../providers/vendor_providers.dart';
@@ -146,6 +147,9 @@ class _VendorDetailScreenState extends ConsumerState<VendorDetailScreen>
                       ref.invalidate(vendorLedgerProvider(widget.vendorId));
                       ref.invalidate(vendorDetailProvider(widget.vendorId));
                       ref.invalidate(vendorsProvider);
+                      ref.invalidate(purchasesProvider);
+                      ref.invalidate(dashboardStatsProvider);
+                      ref.invalidate(recentPurchasesProvider);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Payment recorded successfully'),

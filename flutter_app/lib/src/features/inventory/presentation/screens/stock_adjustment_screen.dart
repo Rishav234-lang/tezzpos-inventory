@@ -29,6 +29,7 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
   final _reasons = [
     'Purchase',
     'Sale',
+    'Return',
     'Damaged',
     'Expired',
     'Stock count',

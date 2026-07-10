@@ -14,7 +14,7 @@ const changePasswordSchema = z.object({
 // Vendor validators
 const vendorSchema = z.object({
   name: z.string().min(1).max(200),
-  mobile: z.string().max(15).optional().nullable(),
+  mobile: z.string().regex(/^\d{1,10}$/).optional().nullable(),
   gstNumber: z.string().max(20).optional().nullable(),
   email: z.string().email().optional().nullable(),
   address: z.string().max(500).optional().nullable(),
@@ -49,7 +49,7 @@ const purchaseItemSchema = z.object({
 
 const purchaseSchema = z.object({
   vendorId: z.string(),
-  invoiceNumber: z.string().min(1),
+  invoiceNumber: z.string().max(50).optional().nullable(),
   purchaseDate: z.string(),
   paidAmount: z.number().min(0).default(0),
   notes: z.string().optional().nullable(),
@@ -59,7 +59,7 @@ const purchaseSchema = z.object({
 // Customer validators
 const customerSchema = z.object({
   name: z.string().min(1).max(200),
-  mobile: z.string().max(15).optional().nullable(),
+  mobile: z.string().regex(/^\d{1,10}$/).optional().nullable(),
   gstNumber: z.string().max(20).optional().nullable(),
   email: z.string().email().optional().nullable(),
   address: z.string().max(500).optional().nullable(),
@@ -138,8 +138,8 @@ const vendorPaymentSchema = z.object({
 // Plan validators
 const planSchema = z.object({
   name: z.string().min(1).max(100),
-  monthlyPrice: z.number().positive(),
-  yearlyPrice: z.number().positive(),
+  monthlyPrice: z.number().min(0),
+  yearlyPrice: z.number().min(0),
   description: z.string().optional().nullable(),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
@@ -148,7 +148,7 @@ const planSchema = z.object({
 const companySchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().email(),
-  phone: z.string().max(15).optional().nullable(),
+  phone: z.string().regex(/^\d{1,10}$/).optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   gstNumber: z.string().max(20).optional().nullable(),
   ownerName: z.string().min(1).max(200),
@@ -160,7 +160,7 @@ const companySchema = z.object({
 const registerSchema = z.object({
   companyName: z.string().min(1).max(200),
   companyEmail: z.string().email(),
-  companyPhone: z.string().max(15).optional().nullable(),
+  companyPhone: z.string().regex(/^\d{1,10}$/).optional().nullable(),
   companyAddress: z.string().max(500).optional().nullable(),
   companyGstNumber: z.string().max(20).optional().nullable(),
   ownerName: z.string().min(1).max(200),

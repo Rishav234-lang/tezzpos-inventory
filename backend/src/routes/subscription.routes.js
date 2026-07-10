@@ -1,10 +1,37 @@
 const { handleError, NotFoundError, ValidationError, UnauthorizedError } = require('../utils/errors');
 const { razorpay, verifyWebhookSignature, verifyPaymentSignature } = require('../utils/razorpay');
 
+const FREE_TRIAL_PLAN_ID = 'free-trial-3-days';
+const FREE_TRIAL_DAYS = 3;
+
+function effectiveSubscriptionEndDate(subscription) {
+  if (!subscription) return null;
+  if (subscription.status !== 'TRIAL') return subscription.endDate;
+  return new Date(subscription.startDate.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
+}
+
 async function subscriptionRoutes(fastify) {
   // Get available plans (public)
   fastify.get('/plans', async (request, reply) => {
     try {
+      await fastify.prisma.plan.upsert({
+        where: { id: FREE_TRIAL_PLAN_ID },
+        update: {
+          name: 'Free Trial - 3 Days',
+          monthlyPrice: 0,
+          yearlyPrice: 0,
+          description: 'Try TezzPOS free for 3 days.',
+          status: 'ACTIVE',
+        },
+        create: {
+          id: FREE_TRIAL_PLAN_ID,
+          name: 'Free Trial - 3 Days',
+          monthlyPrice: 0,
+          yearlyPrice: 0,
+          description: 'Try TezzPOS free for 3 days.',
+          status: 'ACTIVE',
+        },
+      });
       const plans = await fastify.prisma.plan.findMany({
         where: { status: 'ACTIVE' },
         orderBy: { monthlyPrice: 'asc' },
@@ -25,6 +52,7 @@ async function subscriptionRoutes(fastify) {
       if (!subscription) throw new NotFoundError('Subscription');
       return {
         ...subscription,
+        endDate: effectiveSubscriptionEndDate(subscription),
         razorpayKeyId: process.env.RAZORPAY_KEY_ID,
       };
     } catch (error) {

@@ -1,6 +1,16 @@
 const bcrypt = require('bcrypt');
 const { loginSchema, changePasswordSchema, registerSchema } = require('../utils/validators');
 const { handleError, UnauthorizedError, ValidationError } = require('../utils/errors');
+const { ensureGeneralCategory } = require('../utils/default-category');
+
+const FREE_TRIAL_PLAN_ID = 'free-trial-3-days';
+const FREE_TRIAL_DAYS = 3;
+
+function effectiveSubscriptionEndDate(subscription) {
+  if (!subscription) return null;
+  if (subscription.status !== 'TRIAL') return subscription.endDate;
+  return new Date(subscription.startDate.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
+}
 
 async function authRoutes(fastify) {
   // Super Admin Login
@@ -39,16 +49,37 @@ async function authRoutes(fastify) {
 
       const hashedPassword = await bcrypt.hash(data.ownerPassword, 10);
       const now = new Date();
-      const trialEndDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-      let planId = data.planId;
-      if (!planId) {
-        const defaultPlan = await fastify.prisma.plan.findFirst({
-          where: { status: 'ACTIVE' },
-          orderBy: { monthlyPrice: 'asc' },
-        });
-        if (defaultPlan) planId = defaultPlan.id;
-      }
+      const freeTrialPlan = await fastify.prisma.plan.upsert({
+        where: { id: FREE_TRIAL_PLAN_ID },
+        update: {
+          name: 'Free Trial - 3 Days',
+          monthlyPrice: 0,
+          yearlyPrice: 0,
+          description: 'Try TezzPOS free for 3 days.',
+          status: 'ACTIVE',
+        },
+        create: {
+          id: FREE_TRIAL_PLAN_ID,
+          name: 'Free Trial - 3 Days',
+          monthlyPrice: 0,
+          yearlyPrice: 0,
+          description: 'Try TezzPOS free for 3 days.',
+          status: 'ACTIVE',
+        },
+      });
+
+      let planId = data.planId || freeTrialPlan.id;
+      const selectedPlan = data.planId
+        ? await fastify.prisma.plan.findFirst({ where: { id: data.planId, status: 'ACTIVE' } })
+        : freeTrialPlan;
+      if (!selectedPlan) throw new ValidationError('Selected plan is not available');
+
+      const isFreeTrialPlan = selectedPlan.id === FREE_TRIAL_PLAN_ID;
+      const subscriptionEndDate = isFreeTrialPlan
+        ? new Date(now.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000)
+        : now;
+      const subscriptionStatus = isFreeTrialPlan ? 'TRIAL' : 'EXPIRED';
 
       const company = await fastify.prisma.company.create({
         data: {
@@ -71,9 +102,9 @@ async function authRoutes(fastify) {
                 planId,
                 billingCycle: data.billingCycle || 'MONTHLY',
                 startDate: now,
-                endDate: trialEndDate,
-                status: 'TRIAL',
-                autoRenew: true,
+                endDate: subscriptionEndDate,
+                status: subscriptionStatus,
+                autoRenew: false,
               },
             },
           } : {}),
@@ -83,6 +114,8 @@ async function authRoutes(fastify) {
           subscription: true,
         },
       });
+
+      await ensureGeneralCategory(fastify.prisma, company.id);
 
       const token = fastify.jwt.sign({
         id: company.owner.id,
@@ -102,7 +135,7 @@ async function authRoutes(fastify) {
           companyStatus: company.status,
           role: 'owner',
           subscriptionStatus: company.subscription?.status || null,
-          subscriptionEndDate: company.subscription?.endDate || null,
+          subscriptionEndDate: effectiveSubscriptionEndDate(company.subscription),
         },
       };
     } catch (error) {
@@ -138,6 +171,8 @@ async function authRoutes(fastify) {
       }
       console.log('[DEBUG] Owner login successful:', owner.id);
 
+      await ensureGeneralCategory(fastify.prisma, owner.companyId);
+
       const token = fastify.jwt.sign({
         id: owner.id,
         email: owner.email,
@@ -156,7 +191,7 @@ async function authRoutes(fastify) {
           companyStatus: owner.company.status,
           role: 'owner',
           subscriptionStatus: owner.company.subscription?.status || null,
-          subscriptionEndDate: owner.company.subscription?.endDate || null,
+          subscriptionEndDate: effectiveSubscriptionEndDate(owner.company.subscription),
         },
       };
     } catch (error) {
@@ -203,6 +238,9 @@ async function authRoutes(fastify) {
         include: { company: { include: { subscription: true } } },
       });
       if (!owner) throw new UnauthorizedError('User not found');
+
+      await ensureGeneralCategory(fastify.prisma, owner.companyId);
+
       return {
         id: owner.id,
         email: owner.email,
@@ -213,7 +251,7 @@ async function authRoutes(fastify) {
         companyStatus: owner.company.status,
         role: 'owner',
         subscriptionStatus: owner.company.subscription?.status || null,
-        subscriptionEndDate: owner.company.subscription?.endDate || null,
+        subscriptionEndDate: effectiveSubscriptionEndDate(owner.company.subscription),
       };
     } catch (error) {
       handleError(reply, error);

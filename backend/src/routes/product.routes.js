@@ -5,6 +5,7 @@ const { productSchema, categorySchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
 const { convertPrismaToJson } = require('../utils/convertPrisma');
+const { ensureGeneralCategory } = require('../utils/default-category');
 
 async function productRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -131,8 +132,25 @@ async function productRoutes(fastify) {
         if (existingBarcode) throw new ValidationError('Barcode already exists');
       }
 
+      let categoryId = data.categoryId;
+      if (categoryId) {
+        const existingCategory = await fastify.prisma.category.findFirst({
+          where: { id: categoryId, companyId },
+          select: { id: true },
+        });
+        if (!existingCategory) {
+          throw new ValidationError('Selected category not found');
+        }
+      } else {
+        const generalCategory = await ensureGeneralCategory(
+          fastify.prisma,
+          companyId,
+        );
+        categoryId = generalCategory.id;
+      }
+
       const product = await fastify.prisma.product.create({
-        data: { ...data, companyId },
+        data: { ...data, companyId, categoryId },
         include: { category: true },
       });
       return reply.status(201).send(product);

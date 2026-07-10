@@ -20,6 +20,15 @@ async function purchaseRoutes(fastify) {
       else if (data.paidAmount > 0) status = 'PARTIAL';
 
       const result = await fastify.prisma.$transaction(async (tx) => {
+        const counter = await tx.companyCounter.upsert({
+          where: { companyId },
+          create: { companyId, purchaseCounter: 1 },
+          update: { purchaseCounter: { increment: 1 } },
+        });
+        const invoiceNumber = (data.invoiceNumber && data.invoiceNumber.trim().length > 0)
+          ? data.invoiceNumber.trim()
+          : `PUR-${new Date().getFullYear()}-${String(counter.purchaseCounter).padStart(6, '0')}`;
+
         const existingBatchCount = await tx.batch.count({ where: { companyId } });
 
         // Create purchase
@@ -27,7 +36,7 @@ async function purchaseRoutes(fastify) {
           data: {
             companyId,
             vendorId: data.vendorId,
-            invoiceNumber: data.invoiceNumber,
+            invoiceNumber,
             purchaseDate: new Date(data.purchaseDate),
             totalAmount,
             paidAmount: data.paidAmount,

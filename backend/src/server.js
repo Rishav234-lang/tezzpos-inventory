@@ -2,18 +2,37 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-dotenv.config();
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+const rootEnvPath = path.resolve(__dirname, '../../.env');
 
-if (!process.env.DATABASE_URL) {
-  const rootEnvPath = path.resolve(__dirname, '../../.env');
-  if (fs.existsSync(rootEnvPath)) {
-    const raw = fs.readFileSync(rootEnvPath, 'utf16le');
-    const match = raw.match(/DATABASE_URL=(.+)/);
-    if (match && match[1]) {
-      process.env.DATABASE_URL = match[1].trim();
+const stripWrappedQuotes = (value) => {
+  if (!value) return value;
+  return value.replace(/^['"]|['"]$/g, '');
+};
+
+const loadUtf16Env = (filePath) => {
+  if (!fs.existsSync(filePath)) return;
+
+  const raw = fs.readFileSync(filePath, 'utf16le');
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) continue;
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const value = stripWrappedQuotes(trimmed.slice(separatorIndex + 1).trim());
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
     }
   }
+};
+
+dotenv.config();
+dotenv.config({ path: rootEnvPath });
+
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('"')) {
+  loadUtf16Env(rootEnvPath);
 }
 const fastify = require('fastify');
 const { registerPlugins } = require('./plugins');

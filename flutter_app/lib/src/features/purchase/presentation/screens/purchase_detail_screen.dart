@@ -1,18 +1,18 @@
-import 'dart:io';
-
-import 'package:dio/dio.dart' as dio_pkg;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../core/utils/invoice_pdf_helper.dart';
 import '../../../../config/providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../../vendor/presentation/providers/vendor_providers.dart';
 import '../../domain/entities/purchase.dart';
 import '../providers/purchase_providers.dart';
 
@@ -43,22 +43,23 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
 
   Future<void> _downloadPurchasePdf() async {
     try {
-      final dio = ref.read(dioProvider).dio;
       final purchase = ref.read(purchaseDetailProvider(widget.purchaseId)).valueOrNull;
-      final response = await dio.get(
-        '/api/invoices/purchases/${widget.purchaseId}/pdf',
-        options: dio_pkg.Options(responseType: dio_pkg.ResponseType.bytes),
+      final dio = ref.read(dioProvider).dio;
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/purchases/${widget.purchaseId}/pdf',
       );
-      final dir = await getTemporaryDirectory();
-      final fname = purchase != null ? 'PUR-${purchase.invoiceNumber}.pdf' : 'purchase-${widget.purchaseId}.pdf';
-      final file = File('${dir.path}/$fname');
-      await file.writeAsBytes(response.data as List<int>);
-      final result = await OpenFilex.open(file.path);
-      if (result.type != ResultType.done && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open PDF: ${result.message}')),
-        );
-      }
+      final filename = purchase != null
+          ? 'PUR-${purchase.invoiceNumber}.pdf'
+          : 'purchase-${widget.purchaseId}.pdf';
+      await InvoicePdfHelper.downloadPdf(
+        bytes: bytes,
+        filename: filename,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice PDF ready')),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,6 +67,99 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
         );
       }
     }
+  }
+
+  Future<void> _sharePurchasePdf([Purchase? purchase]) async {
+    try {
+      final currentPurchase =
+          purchase ?? ref.read(purchaseDetailProvider(widget.purchaseId)).valueOrNull;
+      if (currentPurchase == null) {
+        throw Exception('Purchase details not loaded yet');
+      }
+      final dio = ref.read(dioProvider).dio;
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/purchases/${currentPurchase.id}/pdf',
+      );
+      final result = await InvoicePdfHelper.sharePdf(
+        bytes: bytes,
+        filename: 'PUR-${currentPurchase.invoiceNumber}.pdf',
+        subject: 'Purchase invoice ${currentPurchase.invoiceNumber}',
+        text: _purchaseShareText(currentPurchase),
+      );
+      if (!mounted) return;
+      final message = result == InvoiceShareResult.shared
+          ? 'Invoice shared successfully'
+          : 'Sharing is not available here. PDF downloaded instead.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Share failed: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _previewPurchasePdf(Purchase purchase) async {
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/purchases/${purchase.id}/pdf',
+      );
+      await InvoicePdfHelper.previewPdf(
+        bytes: bytes,
+        filename: 'PUR-${purchase.invoiceNumber}.pdf',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Preview failed: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _copyPurchaseInvoiceText(Purchase purchase) async {
+    await Clipboard.setData(
+      ClipboardData(text: _purchaseShareText(purchase)),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invoice details copied')),
+    );
+  }
+
+  Future<void> _shareViaEmail(Purchase purchase) async {
+    final emailUri = Uri(
+      scheme: 'mailto',
+      queryParameters: {
+        'subject': 'Purchase invoice ${purchase.invoiceNumber}',
+        'body': _purchaseShareText(purchase),
+      },
+    );
+    await launchUrl(emailUri);
+  }
+
+  Future<void> _shareViaWhatsApp(Purchase purchase) async {
+    final message = Uri.encodeComponent(_purchaseShareText(purchase));
+    final whatsappUri = Uri.parse('https://wa.me/?text=$message');
+    await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+  }
+
+  String _purchaseShareText(Purchase purchase) {
+    final amount = NumberFormat('#,##,##0.00').format(purchase.totalAmount);
+    return 'Purchase invoice ${purchase.invoiceNumber}\n'
+        'Supplier: ${purchase.vendor?.name ?? 'Unknown Supplier'}\n'
+        'Amount: Rs $amount\n'
+        'Date: ${DateFormat('dd MMM yyyy').format(purchase.purchaseDate)}';
   }
 
   void _showMoreOptions(BuildContext context) {
@@ -132,7 +226,7 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedMethod,
+                initialValue: selectedMethod,
                 decoration: InputDecoration(
                   labelText: 'Payment Method',
                   filled: true,
@@ -166,6 +260,12 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
                       );
                     } else {
                       ref.invalidate(purchaseDetailProvider(widget.purchaseId));
+                      ref.invalidate(purchasesProvider);
+                      ref.invalidate(vendorsProvider);
+                      ref.invalidate(vendorDetailProvider(purchase.vendorId));
+                      ref.invalidate(vendorLedgerProvider(purchase.vendorId));
+                      ref.invalidate(dashboardStatsProvider);
+                      ref.invalidate(recentPurchasesProvider);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Payment recorded successfully')),
                       );
@@ -265,7 +365,7 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
             ),
           ),
           IconButton(
-            onPressed: () => _downloadPurchasePdf(),
+            onPressed: () => _sharePurchasePdf(),
             icon: const Icon(Icons.share_outlined, color: AppColors.onSurface),
           ),
           IconButton(
@@ -551,7 +651,14 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ShareInvoiceSheet(purchase: purchase),
+      builder: (_) => _ShareInvoiceSheet(
+        purchase: purchase,
+        onWhatsApp: () => _shareViaWhatsApp(purchase),
+        onEmail: () => _shareViaEmail(purchase),
+        onDownload: _downloadPurchasePdf,
+        onPreview: () => _previewPurchasePdf(purchase),
+        onCopy: () => _copyPurchaseInvoiceText(purchase),
+      ),
     );
   }
 
@@ -589,6 +696,12 @@ class _PurchaseDetailScreenState extends ConsumerState<PurchaseDetailScreen>
           });
           if (!mounted) return;
           ref.invalidate(purchaseDetailProvider(purchase.id));
+          ref.invalidate(purchasesProvider);
+          ref.invalidate(vendorsProvider);
+          ref.invalidate(vendorDetailProvider(purchase.vendorId));
+          ref.invalidate(vendorLedgerProvider(purchase.vendorId));
+          ref.invalidate(dashboardStatsProvider);
+          ref.invalidate(recentPurchasesProvider);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Marked as paid')),
@@ -1425,25 +1538,56 @@ class _InvoiceTabState extends ConsumerState<_InvoiceTab> {
     setState(() => _isDownloading = true);
     try {
       final dio = ref.read(dioProvider).dio;
-      final response = await dio.get(
-        '/api/invoices/purchases/${widget.purchase.id}/pdf',
-        options: dio_pkg.Options(responseType: dio_pkg.ResponseType.bytes),
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/purchases/${widget.purchase.id}/pdf',
       );
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/PUR-${widget.purchase.invoiceNumber}.pdf');
-      await file.writeAsBytes(response.data as List<int>);
-      final result = await OpenFilex.open(file.path);
-      if (result.type != ResultType.done && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open PDF: ${result.message}')),
-        );
-      }
+      await InvoicePdfHelper.downloadPdf(
+        bytes: bytes,
+        filename: 'PUR-${widget.purchase.invoiceNumber}.pdf',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice PDF ready')),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Download failed: $e'), backgroundColor: AppColors.error),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<void> _sharePdf() async {
+    setState(() => _isDownloading = true);
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/purchases/${widget.purchase.id}/pdf',
+      );
+      final result = await InvoicePdfHelper.sharePdf(
+        bytes: bytes,
+        filename: 'PUR-${widget.purchase.invoiceNumber}.pdf',
+        subject: 'Purchase invoice ${widget.purchase.invoiceNumber}',
+        text:
+            'Purchase invoice ${widget.purchase.invoiceNumber} - Rs ${widget.purchase.totalAmount.toStringAsFixed(2)}',
+      );
+      if (!mounted) return;
+      final message = result == InvoiceShareResult.shared
+          ? 'Invoice shared successfully'
+          : 'Sharing is not available here. PDF downloaded instead.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Share failed: $e'), backgroundColor: AppColors.error),
+      );
     } finally {
       if (mounted) setState(() => _isDownloading = false);
     }
@@ -1674,7 +1818,7 @@ class _InvoiceTabState extends ConsumerState<_InvoiceTab> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _isDownloading ? null : _downloadPdf,
+                  onPressed: _isDownloading ? null : _sharePdf,
                   icon: const Icon(Icons.share, size: 18),
                   label: const Text('Share'),
                   style: OutlinedButton.styleFrom(
@@ -1818,6 +1962,13 @@ class _RecordPaymentSheetState extends ConsumerState<_RecordPaymentSheet> {
     ref.listen(purchaseNotifierProvider, (_, next) {
       next.whenOrNull(
         data: (_) {
+          ref.invalidate(purchaseDetailProvider(widget.purchase.id));
+          ref.invalidate(purchasesProvider);
+          ref.invalidate(vendorsProvider);
+          ref.invalidate(vendorDetailProvider(widget.purchase.vendorId));
+          ref.invalidate(vendorLedgerProvider(widget.purchase.vendorId));
+          ref.invalidate(dashboardStatsProvider);
+          ref.invalidate(recentPurchasesProvider);
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Payment recorded successfully')),
@@ -2129,17 +2280,54 @@ class _PaymentSummaryItem extends StatelessWidget {
 
 class _ShareInvoiceSheet extends StatelessWidget {
   final Purchase purchase;
+  final Future<void> Function() onWhatsApp;
+  final Future<void> Function() onEmail;
+  final Future<void> Function() onDownload;
+  final Future<void> Function() onPreview;
+  final Future<void> Function() onCopy;
 
-  const _ShareInvoiceSheet({required this.purchase});
+  const _ShareInvoiceSheet({
+    required this.purchase,
+    required this.onWhatsApp,
+    required this.onEmail,
+    required this.onDownload,
+    required this.onPreview,
+    required this.onCopy,
+  });
 
   @override
   Widget build(BuildContext context) {
     final options = [
-      _ShareOption(icon: Icons.chat_bubble, color: const Color(0xFF25D366), label: 'WhatsApp'),
-      _ShareOption(icon: Icons.email, color: const Color(0xFFEA4335), label: 'Email'),
-      _ShareOption(icon: Icons.picture_as_pdf, color: const Color(0xFFDC2626), label: 'Save as PDF'),
-      _ShareOption(icon: Icons.print, color: const Color(0xFF2563EB), label: 'Print'),
-      _ShareOption(icon: Icons.link, color: const Color(0xFF7C3AED), label: 'Copy Link'),
+      _ShareOption(
+        icon: Icons.chat_bubble,
+        color: const Color(0xFF25D366),
+        label: 'WhatsApp',
+        onTap: onWhatsApp,
+      ),
+      _ShareOption(
+        icon: Icons.email,
+        color: const Color(0xFFEA4335),
+        label: 'Email',
+        onTap: onEmail,
+      ),
+      _ShareOption(
+        icon: Icons.picture_as_pdf,
+        color: const Color(0xFFDC2626),
+        label: 'Save as PDF',
+        onTap: onDownload,
+      ),
+      _ShareOption(
+        icon: Icons.print,
+        color: const Color(0xFF2563EB),
+        label: 'Print',
+        onTap: onPreview,
+      ),
+      _ShareOption(
+        icon: Icons.link,
+        color: const Color(0xFF7C3AED),
+        label: 'Copy Details',
+        onTap: onCopy,
+      ),
     ];
 
     return Container(
@@ -2173,7 +2361,10 @@ class _ShareInvoiceSheet extends StatelessWidget {
               alignment: WrapAlignment.center,
               children: options.map((opt) {
                 return GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    await opt.onTap();
+                  },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -2205,8 +2396,14 @@ class _ShareOption {
   final IconData icon;
   final Color color;
   final String label;
+  final Future<void> Function() onTap;
 
-  const _ShareOption({required this.icon, required this.color, required this.label});
+  const _ShareOption({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
 }
 
 class _MoreOptionsSheet extends StatelessWidget {

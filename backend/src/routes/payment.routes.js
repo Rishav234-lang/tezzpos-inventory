@@ -1,6 +1,148 @@
 const { customerPaymentSchema, vendorPaymentSchema } = require('../utils/validators');
-const { handleError, NotFoundError } = require('../utils/errors');
+const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { getPaginationParams, createPaginatedResponse } = require('../utils/pagination');
+
+const PAYMENT_TOLERANCE = 0.01;
+
+const toNumber = (value) => Number(value || 0);
+
+const getInvoiceStatus = (totalAmount, paidAmount) => {
+  if (paidAmount >= totalAmount) return 'PAID';
+  if (paidAmount > 0) return 'PARTIAL';
+  return 'UNPAID';
+};
+
+async function applyCustomerPaymentToSales(tx, { companyId, customerId, amount }) {
+  const sales = await tx.sale.findMany({
+    where: {
+      companyId,
+      customerId,
+      balanceAmount: { gt: 0 },
+    },
+    orderBy: [{ invoiceDate: 'asc' }, { createdAt: 'asc' }],
+  });
+
+  const totalOutstanding = sales.reduce(
+    (sum, sale) => sum + Math.max(0, toNumber(sale.balanceAmount)),
+    0,
+  );
+
+  if (totalOutstanding <= PAYMENT_TOLERANCE) {
+    throw new ValidationError('No outstanding sale invoices found for this customer');
+  }
+
+  if (amount - totalOutstanding > PAYMENT_TOLERANCE) {
+    throw new ValidationError(
+      `Payment amount exceeds outstanding balance of Rs ${totalOutstanding.toFixed(2)}`,
+    );
+  }
+
+  let remainingAmount = amount;
+
+  for (const sale of sales) {
+    if (remainingAmount <= PAYMENT_TOLERANCE) break;
+
+    const currentPaid = toNumber(sale.paidAmount);
+    const totalAmount = toNumber(sale.totalAmount);
+    const currentBalance = Math.max(0, toNumber(sale.balanceAmount));
+    const amountToApply = Math.min(currentBalance, remainingAmount);
+    const newPaidAmount = currentPaid + amountToApply;
+    const newBalanceAmount = Math.max(0, totalAmount - newPaidAmount);
+
+    await tx.sale.update({
+      where: { id: sale.id },
+      data: {
+        paidAmount: newPaidAmount,
+        balanceAmount: newBalanceAmount,
+        status: getInvoiceStatus(totalAmount, newPaidAmount),
+      },
+    });
+
+    remainingAmount -= amountToApply;
+  }
+}
+
+async function applyVendorPaymentToPurchases(tx, { companyId, vendorId, purchaseId, amount }) {
+  if (purchaseId) {
+    const purchase = await tx.purchase.findFirst({
+      where: { id: purchaseId, companyId, vendorId },
+    });
+
+    if (!purchase) throw new NotFoundError('Purchase');
+
+    const currentBalance = Math.max(0, toNumber(purchase.balanceAmount));
+    if (currentBalance <= PAYMENT_TOLERANCE) {
+      throw new ValidationError('This purchase invoice is already fully paid');
+    }
+
+    if (amount - currentBalance > PAYMENT_TOLERANCE) {
+      throw new ValidationError(
+        `Payment amount exceeds purchase balance of Rs ${currentBalance.toFixed(2)}`,
+      );
+    }
+
+    const newPaidAmount = toNumber(purchase.paidAmount) + amount;
+    const totalAmount = toNumber(purchase.totalAmount);
+
+    await tx.purchase.update({
+      where: { id: purchase.id },
+      data: {
+        paidAmount: newPaidAmount,
+        balanceAmount: Math.max(0, totalAmount - newPaidAmount),
+        status: getInvoiceStatus(totalAmount, newPaidAmount),
+      },
+    });
+    return;
+  }
+
+  const purchases = await tx.purchase.findMany({
+    where: {
+      companyId,
+      vendorId,
+      balanceAmount: { gt: 0 },
+    },
+    orderBy: [{ purchaseDate: 'asc' }, { createdAt: 'asc' }],
+  });
+
+  const totalOutstanding = purchases.reduce(
+    (sum, purchase) => sum + Math.max(0, toNumber(purchase.balanceAmount)),
+    0,
+  );
+
+  if (totalOutstanding <= PAYMENT_TOLERANCE) {
+    throw new ValidationError('No outstanding purchase invoices found for this supplier');
+  }
+
+  if (amount - totalOutstanding > PAYMENT_TOLERANCE) {
+    throw new ValidationError(
+      `Payment amount exceeds outstanding balance of Rs ${totalOutstanding.toFixed(2)}`,
+    );
+  }
+
+  let remainingAmount = amount;
+
+  for (const purchase of purchases) {
+    if (remainingAmount <= PAYMENT_TOLERANCE) break;
+
+    const currentPaid = toNumber(purchase.paidAmount);
+    const totalAmount = toNumber(purchase.totalAmount);
+    const currentBalance = Math.max(0, toNumber(purchase.balanceAmount));
+    const amountToApply = Math.min(currentBalance, remainingAmount);
+    const newPaidAmount = currentPaid + amountToApply;
+    const newBalanceAmount = Math.max(0, totalAmount - newPaidAmount);
+
+    await tx.purchase.update({
+      where: { id: purchase.id },
+      data: {
+        paidAmount: newPaidAmount,
+        balanceAmount: newBalanceAmount,
+        status: getInvoiceStatus(totalAmount, newPaidAmount),
+      },
+    });
+
+    remainingAmount -= amountToApply;
+  }
+}
 
 async function paymentRoutes(fastify) {
   fastify.addHook('preHandler', fastify.authenticateOwner);
@@ -12,17 +154,33 @@ async function paymentRoutes(fastify) {
   fastify.post('/customers', async (request, reply) => {
     try {
       const data = customerPaymentSchema.parse(request.body);
-      const payment = await fastify.prisma.customerPayment.create({
-        data: {
+      const payment = await fastify.prisma.$transaction(async (tx) => {
+        const customer = await tx.customer.findFirst({
+          where: { id: data.customerId, companyId: request.user.companyId },
+          select: { id: true, name: true },
+        });
+
+        if (!customer) throw new NotFoundError('Customer');
+
+        await applyCustomerPaymentToSales(tx, {
           companyId: request.user.companyId,
           customerId: data.customerId,
-          amount: data.amount,
-          paymentDate: new Date(data.paymentDate),
-          paymentMethod: data.paymentMethod,
-          notes: data.notes,
-        },
-        include: { customer: { select: { id: true, name: true } } },
+          amount: toNumber(data.amount),
+        });
+
+        return tx.customerPayment.create({
+          data: {
+            companyId: request.user.companyId,
+            customerId: data.customerId,
+            amount: data.amount,
+            paymentDate: new Date(data.paymentDate),
+            paymentMethod: data.paymentMethod,
+            notes: data.notes,
+          },
+          include: { customer: { select: { id: true, name: true } } },
+        });
       });
+
       return reply.status(201).send(payment);
     } catch (error) {
       handleError(reply, error);
@@ -67,43 +225,35 @@ async function paymentRoutes(fastify) {
   fastify.post('/vendors', async (request, reply) => {
     try {
       const data = vendorPaymentSchema.parse(request.body);
-      const payment = await fastify.prisma.vendorPayment.create({
-        data: {
+      const payment = await fastify.prisma.$transaction(async (tx) => {
+        const vendor = await tx.vendor.findFirst({
+          where: { id: data.vendorId, companyId: request.user.companyId },
+          select: { id: true, name: true },
+        });
+
+        if (!vendor) throw new NotFoundError('Vendor');
+
+        await applyVendorPaymentToPurchases(tx, {
           companyId: request.user.companyId,
           vendorId: data.vendorId,
           purchaseId: data.purchaseId,
-          amount: data.amount,
-          paymentDate: new Date(data.paymentDate),
-          paymentMethod: data.paymentMethod,
-          referenceNo: data.referenceNo,
-          notes: data.notes,
-        },
-        include: { vendor: { select: { id: true, name: true } } },
-      });
-
-      // If linked to a purchase, update the purchase paid amount
-      if (data.purchaseId) {
-        const purchase = await fastify.prisma.purchase.findFirst({
-          where: { id: data.purchaseId, companyId: request.user.companyId },
+          amount: toNumber(data.amount),
         });
-        if (purchase) {
-          const newPaid = Number(purchase.paidAmount) + Number(data.amount);
-          const newBalance = Number(purchase.totalAmount) - newPaid;
-          const newStatus = newPaid >= Number(purchase.totalAmount)
-            ? 'PAID'
-            : newPaid > 0
-              ? 'PARTIAL'
-              : 'UNPAID';
-          await fastify.prisma.purchase.update({
-            where: { id: data.purchaseId },
-            data: {
-              paidAmount: newPaid,
-              balanceAmount: Math.max(0, newBalance),
-              status: newStatus,
-            },
-          });
-        }
-      }
+
+        return tx.vendorPayment.create({
+          data: {
+            companyId: request.user.companyId,
+            vendorId: data.vendorId,
+            purchaseId: data.purchaseId,
+            amount: data.amount,
+            paymentDate: new Date(data.paymentDate),
+            paymentMethod: data.paymentMethod,
+            referenceNo: data.referenceNo,
+            notes: data.notes,
+          },
+          include: { vendor: { select: { id: true, name: true } } },
+        });
+      });
 
       return reply.status(201).send(payment);
     } catch (error) {

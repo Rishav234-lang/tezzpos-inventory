@@ -4,6 +4,10 @@ const { pipeline } = require('stream/promises');
 const { categorySchema } = require('../utils/validators');
 const { handleError, NotFoundError, ValidationError } = require('../utils/errors');
 const { convertPrismaToJson } = require('../utils/convertPrisma');
+const {
+  ensureGeneralCategory,
+  isGeneralCategoryName,
+} = require('../utils/default-category');
 
 async function categoryRoutes(fastify, options) {
   fastify.addHook('onRequest', fastify.authenticate);
@@ -21,6 +25,8 @@ async function categoryRoutes(fastify, options) {
       if (status) {
         where.status = status;
       }
+
+      await ensureGeneralCategory(fastify.prisma, companyId);
 
       const categories = await fastify.prisma.category.findMany({
         where,
@@ -126,6 +132,9 @@ async function categoryRoutes(fastify, options) {
         where: { id: request.params.id, companyId: request.user.companyId },
       });
       if (!existing) throw new NotFoundError('Category');
+      if (isGeneralCategoryName(existing.name)) {
+        throw new ValidationError('General category is default and cannot be deleted');
+      }
 
       await fastify.prisma.category.delete({
         where: { id: request.params.id },

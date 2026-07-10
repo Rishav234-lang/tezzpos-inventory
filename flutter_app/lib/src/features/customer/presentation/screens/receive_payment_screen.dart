@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../../sale/presentation/providers/sale_providers.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customer_providers.dart';
 
 class ReceivePaymentScreen extends ConsumerStatefulWidget {
   final String? customerId;
+  final String? sourceSaleId;
 
-  const ReceivePaymentScreen({super.key, this.customerId});
+  const ReceivePaymentScreen({super.key, this.customerId, this.sourceSaleId});
 
   @override
   ConsumerState<ReceivePaymentScreen> createState() =>
@@ -357,8 +360,16 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
       );
     } else {
       ref.invalidate(customersProvider);
+      ref.invalidate(allCustomersProvider);
       ref.invalidate(customerLedgerProvider(_selectedCustomer!.id));
       ref.invalidate(customerDetailProvider(_selectedCustomer!.id));
+      ref.invalidate(customerSalesProvider(_selectedCustomer!.id));
+      ref.invalidate(salesProvider);
+      if (widget.sourceSaleId != null && widget.sourceSaleId!.isNotEmpty) {
+        ref.invalidate(saleDetailProvider(widget.sourceSaleId!));
+      }
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(recentSalesProvider);
       context.pop();
       ScaffoldMessenger.of(
         context,

@@ -7,6 +7,7 @@ import '../../../../config/providers.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../subscription/presentation/providers/subscription_providers.dart';
@@ -15,12 +16,18 @@ class CompanyRegistrationScreen extends ConsumerStatefulWidget {
   const CompanyRegistrationScreen({super.key});
 
   @override
-  ConsumerState<CompanyRegistrationScreen> createState() => _CompanyRegistrationScreenState();
+  ConsumerState<CompanyRegistrationScreen> createState() =>
+      _CompanyRegistrationScreenState();
 }
 
-class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationScreen> {
+class _CompanyRegistrationScreenState
+    extends ConsumerState<CompanyRegistrationScreen> {
+  static const _freeTrialPlanId = 'free-trial-3-days';
+
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
+  bool _companyEmailSameAsPersonal = true;
+  bool _showCompanyMoreDetails = false;
 
   // Company
   final _companyNameController = TextEditingController();
@@ -42,7 +49,14 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
   String _billingCycle = 'MONTHLY';
 
   @override
+  void initState() {
+    super.initState();
+    _ownerEmailController.addListener(_syncCompanyEmailFromOwner);
+  }
+
+  @override
   void dispose() {
+    _ownerEmailController.removeListener(_syncCompanyEmailFromOwner);
     _companyNameController.dispose();
     _companyEmailController.dispose();
     _companyPhoneController.dispose();
@@ -55,29 +69,53 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
     super.dispose();
   }
 
+  void _syncCompanyEmailFromOwner() {
+    if (!_companyEmailSameAsPersonal) return;
+    final ownerEmail = _ownerEmailController.text.trim();
+    if (_companyEmailController.text == ownerEmail) return;
+    _companyEmailController.value = TextEditingValue(
+      text: ownerEmail,
+      selection: TextSelection.collapsed(offset: ownerEmail.length),
+    );
+  }
+
   Future<void> _register() async {
+    if (_companyEmailSameAsPersonal) {
+      _syncCompanyEmailFromOwner();
+    }
     if (!_formKey.currentState!.validate()) return;
     if (_ownerPasswordController.text != _ownerConfirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match'), backgroundColor: AppColors.error),
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
 
     FocusScope.of(context).unfocus();
 
-    await ref.read(authNotifierProvider.notifier).registerCompany(
-      companyName: _companyNameController.text.trim(),
-      companyEmail: _companyEmailController.text.trim(),
-      companyPhone: _companyPhoneController.text.trim().isEmpty ? null : _companyPhoneController.text.trim(),
-      companyAddress: _companyAddressController.text.trim().isEmpty ? null : _companyAddressController.text.trim(),
-      companyGstNumber: _companyGstController.text.trim().isEmpty ? null : _companyGstController.text.trim(),
-      ownerName: _ownerNameController.text.trim(),
-      ownerEmail: _ownerEmailController.text.trim(),
-      ownerPassword: _ownerPasswordController.text,
-      planId: _selectedPlanId,
-      billingCycle: _billingCycle,
-    );
+    await ref
+        .read(authNotifierProvider.notifier)
+        .registerCompany(
+          companyName: _companyNameController.text.trim(),
+          companyEmail: _companyEmailController.text.trim(),
+          companyPhone: _companyPhoneController.text.trim().isEmpty
+              ? null
+              : _companyPhoneController.text.trim(),
+          companyAddress: _companyAddressController.text.trim().isEmpty
+              ? null
+              : _companyAddressController.text.trim(),
+          companyGstNumber: _companyGstController.text.trim().isEmpty
+              ? null
+              : _companyGstController.text.trim(),
+          ownerName: _ownerNameController.text.trim(),
+          ownerEmail: _ownerEmailController.text.trim(),
+          ownerPassword: _ownerPasswordController.text,
+          planId: _selectedPlanId,
+          billingCycle: _billingCycle,
+        );
 
     final state = ref.read(authNotifierProvider);
     if (state.hasError && mounted) {
@@ -86,9 +124,17 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
           content: Text(state.error.toString()),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
+      return;
+    }
+
+    if (!mounted) return;
+    if (_selectedPlanId != null && _selectedPlanId != _freeTrialPlanId) {
+      context.go(AppRoutes.subscriptionExpired);
     }
   }
 
@@ -110,7 +156,9 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                 IconButton(
                   onPressed: () => context.pop(),
                   icon: const Icon(Icons.arrow_back_rounded),
-                  style: IconButton.styleFrom(backgroundColor: AppColors.surfaceVariant),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.surfaceVariant,
+                  ),
                 ),
 
                 const SizedBox(height: 24),
@@ -124,19 +172,23 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                       gradient: AppColors.primaryGradient,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 36),
+                    child: const Icon(
+                      Icons.storefront_rounded,
+                      color: Colors.white,
+                      size: 36,
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
                 Text(
-                  'Create Your Account',
-                  style: context.textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
-                )
+                      'Create Your Account',
+                      style: context.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.onSurface,
+                      ),
+                    )
                     .animate()
                     .fadeIn(delay: const Duration(milliseconds: 100))
                     .slideY(begin: 0.2, end: 0),
@@ -144,11 +196,11 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                 const SizedBox(height: 8),
 
                 Text(
-                  'Start your 14-day free trial. No credit card required.',
-                  style: context.textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                )
-                    .animate()
-                    .fadeIn(delay: const Duration(milliseconds: 200)),
+                  'Start your 3-day free trial. No credit card required.',
+                  style: context.textTheme.bodyLarge?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ).animate().fadeIn(delay: const Duration(milliseconds: 200)),
 
                 const SizedBox(height: 24),
 
@@ -157,8 +209,8 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                 const SizedBox(height: 24),
 
                 // Step content
-                if (_currentStep == 0) _buildCompanyStep(),
-                if (_currentStep == 1) _buildOwnerStep(),
+                if (_currentStep == 0) _buildOwnerStep(),
+                if (_currentStep == 1) _buildCompanyStep(),
                 if (_currentStep == 2) _buildPlanStep(plansAsync),
 
                 const SizedBox(height: 32),
@@ -172,9 +224,13 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                           onPressed: () => setState(() => _currentStep--),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.onSurface,
-                            side: BorderSide(color: AppColors.outline.withValues(alpha: 0.3)),
+                            side: BorderSide(
+                              color: AppColors.outline.withValues(alpha: 0.3),
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('Back'),
                         ),
@@ -186,7 +242,9 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                         isLoading: authState.isLoading && _currentStep == 2,
                         onPressed: () {
                           if (_currentStep < 2) {
-                            setState(() => _currentStep++);
+                            if (_canMoveToNextStep()) {
+                              setState(() => _currentStep++);
+                            }
                           } else {
                             _register();
                           }
@@ -194,15 +252,14 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                       ),
                     ),
                   ],
-                )
-                    .animate()
-                    .fadeIn(delay: const Duration(milliseconds: 600)),
+                ).animate().fadeIn(delay: const Duration(milliseconds: 600)),
 
                 const SizedBox(height: 24),
 
                 Center(
                   child: TextButton(
-                    onPressed: () => context.pushReplacement(AppRoutes.companyLogin),
+                    onPressed: () =>
+                        context.pushReplacement(AppRoutes.companyLogin),
                     child: Text(
                       'Already have an account? Sign In',
                       style: context.textTheme.titleSmall?.copyWith(
@@ -211,9 +268,7 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                       ),
                     ),
                   ),
-                )
-                    .animate()
-                    .fadeIn(delay: const Duration(milliseconds: 700)),
+                ).animate().fadeIn(delay: const Duration(milliseconds: 700)),
 
                 const SizedBox(height: 40),
               ],
@@ -224,8 +279,64 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
     );
   }
 
+  bool _canMoveToNextStep() {
+    if (_currentStep == 0) {
+      if (_ownerNameController.text.trim().isEmpty) {
+        _showStepError('Owner name is required');
+        return false;
+      }
+      final email = _ownerEmailController.text.trim();
+      if (email.isEmpty || !email.contains('@')) {
+        _showStepError('Enter a valid owner email');
+        return false;
+      }
+      if (_ownerPasswordController.text.length < 6) {
+        _showStepError('Password must be at least 6 characters');
+        return false;
+      }
+      if (_ownerConfirmPasswordController.text.isEmpty) {
+        _showStepError('Please confirm password');
+        return false;
+      }
+      if (_ownerPasswordController.text !=
+          _ownerConfirmPasswordController.text) {
+        _showStepError('Passwords do not match');
+        return false;
+      }
+    }
+
+    if (_currentStep == 1) {
+      if (_companyNameController.text.trim().isEmpty) {
+        _showStepError('Company name is required');
+        return false;
+      }
+      if (_companyEmailSameAsPersonal) {
+        _syncCompanyEmailFromOwner();
+      } else {
+        final email = _companyEmailController.text.trim();
+        if (email.isEmpty || !email.contains('@')) {
+          _showStepError('Enter a valid company email');
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  void _showStepError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   Widget _buildStepper() {
-    final steps = ['Company', 'Owner', 'Plan'];
+    final steps = ['Personal', 'Company', 'Plan'];
     return Row(
       children: List.generate(steps.length, (index) {
         final isActive = index == _currentStep;
@@ -243,17 +354,23 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                         color: isActive
                             ? AppColors.primary
                             : isCompleted
-                                ? AppColors.success
-                                : AppColors.surfaceVariant,
+                            ? AppColors.success
+                            : AppColors.surfaceVariant,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
                         child: isCompleted
-                            ? const Icon(Icons.check, color: Colors.white, size: 18)
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 18,
+                              )
                             : Text(
                                 '${index + 1}',
                                 style: TextStyle(
-                                  color: isActive ? Colors.white : AppColors.onSurfaceVariant,
+                                  color: isActive
+                                      ? Colors.white
+                                      : AppColors.onSurfaceVariant,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
@@ -264,8 +381,12 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                     Text(
                       steps[index],
                       style: context.textTheme.labelSmall?.copyWith(
-                        color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                        color: isActive
+                            ? AppColors.primary
+                            : AppColors.onSurfaceVariant,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
                   ],
@@ -275,7 +396,9 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
                 Expanded(
                   child: Container(
                     height: 2,
-                    color: isCompleted ? AppColors.success : AppColors.outline.withValues(alpha: 0.2),
+                    color: isCompleted
+                        ? AppColors.success
+                        : AppColors.outline.withValues(alpha: 0.2),
                   ),
                 ),
             ],
@@ -287,53 +410,125 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
 
   Widget _buildCompanyStep() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppTextField(
-          label: 'Company Name',
-          hint: 'ABC Retail Pvt Ltd',
-          controller: _companyNameController,
-          prefixIcon: const Icon(Icons.business_outlined, color: AppColors.onSurfaceVariant),
-          validator: (v) => v == null || v.isEmpty ? 'Company name is required' : null,
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'Company Email',
-          hint: 'company@example.com',
-          controller: _companyEmailController,
-          keyboardType: TextInputType.emailAddress,
-          prefixIcon: const Icon(Icons.email_outlined, color: AppColors.onSurfaceVariant),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Email is required';
-            if (!v.contains('@')) return 'Enter a valid email';
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'Phone (Optional)',
-          hint: '+91 98765 43210',
-          controller: _companyPhoneController,
-          keyboardType: TextInputType.phone,
-          prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.onSurfaceVariant),
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'Address (Optional)',
-          hint: '123 Business Street, City',
-          controller: _companyAddressController,
-          maxLines: 2,
-          prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.onSurfaceVariant),
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'GST Number (Optional)',
-          hint: '24ABCDE1234F1Z5',
-          controller: _companyGstController,
-          prefixIcon: const Icon(Icons.receipt_outlined, color: AppColors.onSurfaceVariant),
-        ),
-      ],
-    )
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Company Details',
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Add your business info after personal details.',
+              style: context.textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              label: 'Company Name',
+              hint: 'ABC Retail Pvt Ltd',
+              controller: _companyNameController,
+              prefixIcon: const Icon(
+                Icons.business_outlined,
+                color: AppColors.onSurfaceVariant,
+              ),
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Company name is required' : null,
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _companyEmailSameAsPersonal,
+              onChanged: (value) {
+                setState(() {
+                  _companyEmailSameAsPersonal = value;
+                  if (value) {
+                    _syncCompanyEmailFromOwner();
+                  } else {
+                    _companyEmailController.clear();
+                  }
+                });
+              },
+              title: const Text('Business email same as personal email'),
+              subtitle: const Text(
+                'Turn off to enter a separate company email.',
+              ),
+            ),
+            if (!_companyEmailSameAsPersonal) ...[
+              const SizedBox(height: 12),
+              AppTextField(
+                label: 'Company Email',
+                hint: 'company@example.com',
+                controller: _companyEmailController,
+                keyboardType: TextInputType.emailAddress,
+                prefixIcon: const Icon(
+                  Icons.email_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Company email is required';
+                  }
+                  if (!v.contains('@')) return 'Enter a valid email';
+                  return null;
+                },
+              ),
+            ],
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => setState(
+                () => _showCompanyMoreDetails = !_showCompanyMoreDetails,
+              ),
+              icon: Icon(
+                _showCompanyMoreDetails
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+              ),
+              label: Text(
+                _showCompanyMoreDetails
+                    ? 'Hide optional details'
+                    : 'More details',
+              ),
+            ),
+            if (_showCompanyMoreDetails) ...[
+              const SizedBox(height: 8),
+              AppTextField(
+                label: 'Phone (Optional)',
+                hint: '+91 98765 43210',
+                controller: _companyPhoneController,
+                keyboardType: TextInputType.phone,
+                inputFormatters: phoneNumberInputFormatters(),
+                prefixIcon: const Icon(
+                  Icons.phone_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Address (Optional)',
+                hint: '123 Business Street, City',
+                controller: _companyAddressController,
+                maxLines: 2,
+                prefixIcon: const Icon(
+                  Icons.location_on_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'GST Number (Optional)',
+                hint: '24ABCDE1234F1Z5',
+                controller: _companyGstController,
+                prefixIcon: const Icon(
+                  Icons.receipt_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        )
         .animate()
         .fadeIn(delay: const Duration(milliseconds: 300))
         .slideY(begin: 0.1, end: 0);
@@ -341,69 +536,105 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
 
   Widget _buildOwnerStep() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppTextField(
-          label: 'Owner Name',
-          hint: 'John Doe',
-          controller: _ownerNameController,
-          prefixIcon: const Icon(Icons.person_outline, color: AppColors.onSurfaceVariant),
-          validator: (v) => v == null || v.isEmpty ? 'Owner name is required' : null,
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'Owner Email',
-          hint: 'owner@example.com',
-          controller: _ownerEmailController,
-          keyboardType: TextInputType.emailAddress,
-          prefixIcon: const Icon(Icons.email_outlined, color: AppColors.onSurfaceVariant),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Email is required';
-            if (!v.contains('@')) return 'Enter a valid email';
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'Password',
-          hint: 'Minimum 6 characters',
-          controller: _ownerPasswordController,
-          obscureText: _obscurePassword,
-          prefixIcon: const Icon(Icons.lock_outline, color: AppColors.onSurfaceVariant),
-          suffixIcon: IconButton(
-            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-              color: AppColors.onSurfaceVariant,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Personal Details',
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Password is required';
-            if (v.length < 6) return 'Password must be at least 6 characters';
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        AppTextField(
-          label: 'Confirm Password',
-          hint: 'Re-enter your password',
-          controller: _ownerConfirmPasswordController,
-          obscureText: _obscureConfirmPassword,
-          prefixIcon: const Icon(Icons.lock_outline, color: AppColors.onSurfaceVariant),
-          suffixIcon: IconButton(
-            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-            icon: Icon(
-              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-              color: AppColors.onSurfaceVariant,
+            const SizedBox(height: 4),
+            Text(
+              'Start with your name and personal login email.',
+              style: context.textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Please confirm password';
-            return null;
-          },
-        ),
-      ],
-    )
+            const SizedBox(height: 16),
+            AppTextField(
+              label: 'Owner Name',
+              hint: 'John Doe',
+              controller: _ownerNameController,
+              prefixIcon: const Icon(
+                Icons.person_outline,
+                color: AppColors.onSurfaceVariant,
+              ),
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Owner name is required' : null,
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              label: 'Owner Email',
+              hint: 'owner@example.com',
+              controller: _ownerEmailController,
+              keyboardType: TextInputType.emailAddress,
+              prefixIcon: const Icon(
+                Icons.email_outlined,
+                color: AppColors.onSurfaceVariant,
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Email is required';
+                if (!v.contains('@')) return 'Enter a valid email';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              label: 'Password',
+              hint: 'Minimum 6 characters',
+              controller: _ownerPasswordController,
+              obscureText: _obscurePassword,
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                color: AppColors.onSurfaceVariant,
+              ),
+              suffixIcon: IconButton(
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Password is required';
+                if (v.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              label: 'Confirm Password',
+              hint: 'Re-enter your password',
+              controller: _ownerConfirmPasswordController,
+              obscureText: _obscureConfirmPassword,
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                color: AppColors.onSurfaceVariant,
+              ),
+              suffixIcon: IconButton(
+                onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Please confirm password';
+                return null;
+              },
+            ),
+          ],
+        )
         .animate()
         .fadeIn(delay: const Duration(milliseconds: 300))
         .slideY(begin: 0.1, end: 0);
@@ -411,103 +642,173 @@ class _CompanyRegistrationScreenState extends ConsumerState<CompanyRegistrationS
 
   Widget _buildPlanStep(AsyncValue<List<Map<String, dynamic>>> plansAsync) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Select a Plan',
-          style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Your 14-day free trial starts immediately. You can cancel anytime.',
-          style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-        ),
-        const SizedBox(height: 16),
-        plansAsync.when(
-          data: (plans) {
-            if (plans.isEmpty) {
-              return const _InfoCard(message: 'No plans available. Contact admin.');
-            }
-            return Column(
-              children: plans.map((plan) {
-                final isSelected = _selectedPlanId == plan['id'];
-                final monthlyPrice = plan['monthlyPrice']?.toString() ?? '0';
-                final yearlyPrice = plan['yearlyPrice']?.toString() ?? '0';
-                return GestureDetector(
-                  onTap: () => setState(() {
-                    _selectedPlanId = plan['id'];
-                  }),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? AppColors.primary : AppColors.outline.withValues(alpha: 0.2),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your Trial Plan',
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Free trial is selected by default for 3 days.',
+              style: context.textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            plansAsync.when(
+              data: (plans) {
+                if (plans.isEmpty) {
+                  return const _InfoCard(
+                    message: 'No plans available. Contact admin.',
+                  );
+                }
+                _selectDefaultPlan(plans);
+                return Column(
+                  children: plans.map((plan) {
+                    final isSelected = _selectedPlanId == plan['id'];
+                    final isFreeTrial = _isFreeTrialPlan(plan);
+                    final monthlyPrice =
+                        plan['monthlyPrice']?.toString() ?? '0';
+                    final yearlyPrice = plan['yearlyPrice']?.toString() ?? '0';
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        _selectedPlanId = plan['id'];
+                      }),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.05)
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.outline.withValues(alpha: 0.2),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                plan['name'] ?? 'Plan',
-                                style: context.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                            Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_unchecked,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.onSurfaceVariant,
                                 ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    plan['name'] ?? 'Plan',
+                                    style: context.textTheme.titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                if (isFreeTrial)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      'Default',
+                                      style: context.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: AppColors.success,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isFreeTrial
+                                  ? 'Try the app free for 3 days.'
+                                  : plan['description'] ?? '',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isFreeTrial
+                                  ? 'Free for 3 days'
+                                  : 'Monthly: \u20b9$monthlyPrice / Yearly: \u20b9$yearlyPrice',
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          plan['description'] ?? '',
-                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Monthly: \u20b9$monthlyPrice / Yearly: \u20b9$yearlyPrice',
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => _InfoCard(message: e.toString().replaceFirst('Exception: ', '')),
-        ),
-        const SizedBox(height: 16),
-        if (_selectedPlanId != null)
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'MONTHLY', label: Text('Monthly')),
-              ButtonSegment(value: 'YEARLY', label: Text('Yearly')),
-            ],
-            selected: {_billingCycle},
-            onSelectionChanged: (Set<String> newSelection) {
-              setState(() => _billingCycle = newSelection.first);
-            },
-          ),
-      ],
-    )
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _InfoCard(
+                message: e.toString().replaceFirst('Exception: ', ''),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_selectedPlanId != null && _selectedPlanId != _freeTrialPlanId)
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'MONTHLY', label: Text('Monthly')),
+                  ButtonSegment(value: 'YEARLY', label: Text('Yearly')),
+                ],
+                selected: {_billingCycle},
+                onSelectionChanged: (Set<String> newSelection) {
+                  setState(() => _billingCycle = newSelection.first);
+                },
+              ),
+          ],
+        )
         .animate()
         .fadeIn(delay: const Duration(milliseconds: 300))
         .slideY(begin: 0.1, end: 0);
+  }
+
+  void _selectDefaultPlan(List<Map<String, dynamic>> plans) {
+    if (_selectedPlanId != null) return;
+    final defaultPlan = plans.firstWhere(
+      _isFreeTrialPlan,
+      orElse: () => plans.first,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectedPlanId != null) return;
+      setState(() {
+        _selectedPlanId = defaultPlan['id']?.toString();
+        _billingCycle = 'MONTHLY';
+      });
+    });
+  }
+
+  bool _isFreeTrialPlan(Map<String, dynamic> plan) {
+    final id = plan['id']?.toString().toLowerCase() ?? '';
+    final name = plan['name']?.toString().toLowerCase() ?? '';
+    final monthlyPrice =
+        num.tryParse(plan['monthlyPrice']?.toString() ?? '') ?? -1;
+    return id == _freeTrialPlanId ||
+        name.contains('free trial') ||
+        monthlyPrice == 0;
   }
 }
 
@@ -529,7 +830,12 @@ class _InfoCard extends StatelessWidget {
           Icon(Icons.info_outline, color: AppColors.onSurfaceVariant),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(message, style: context.textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant)),
+            child: Text(
+              message,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
       ),

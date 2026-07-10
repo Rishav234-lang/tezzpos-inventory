@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../../../customer/domain/entities/customer.dart' as customer_entity;
 import '../../../customer/presentation/providers/customer_providers.dart';
 import '../../../product/domain/entities/product.dart' as product_entity;
@@ -117,6 +118,7 @@ class _SimpleInventoryFlowScreenState
   bool _isSaving = false;
   String _lastSuggestedPurchasePaidAmount = '';
   String _lastSuggestedSalePaidAmount = '';
+  String _lastSuggestedSalePrice = '';
 
   @override
   void initState() {
@@ -196,7 +198,56 @@ class _SimpleInventoryFlowScreenState
   Future<void> _pickSaleProduct() async {
     final product = await _showProductPicker();
     if (product == null) return;
-    setState(() => _selectedSaleProduct = product);
+    final selectedProduct = _resolveProductByName(product);
+    setState(() {
+      _selectedSaleProduct = product;
+    });
+    _applySelectedSalePrice(selectedProduct, force: true);
+    _refreshSaleAmounts();
+  }
+
+  double _salePriceForProduct(product_entity.Product? product) {
+    if (product == null) return 0;
+    return product.sellingPrice > 0
+        ? product.sellingPrice
+        : product.firstMrp ??
+            (product.stockValueMrp > 0 ? product.stockValueMrp : null) ??
+            0;
+  }
+
+  void _applySelectedSalePrice(
+    product_entity.Product? product, {
+    bool force = false,
+  }) {
+    final nextPrice = _salePriceForProduct(product);
+    if (nextPrice <= 0) return;
+    final nextText = _formatMoneyText(nextPrice);
+    final currentText = _sellPriceController.text.trim();
+    final shouldReplace =
+        force ||
+        currentText.isEmpty ||
+        currentText == _lastSuggestedSalePrice;
+
+    _lastSuggestedSalePrice = nextText;
+    if (shouldReplace && currentText != nextText) {
+      _sellPriceController.value = TextEditingValue(
+        text: nextText,
+        selection: TextSelection.collapsed(offset: nextText.length),
+      );
+      _lastSuggestedSalePaidAmount = '';
+    }
+  }
+
+  product_entity.Product? _resolveProductByName(String productName) {
+    final direct = _productsByName[productName];
+    if (direct != null) return direct;
+    final normalized = productName.trim().toLowerCase();
+    for (final entry in _productsByName.entries) {
+      if (entry.key.trim().toLowerCase() == normalized) {
+        return entry.value;
+      }
+    }
+    return null;
   }
 
   void _updateSalePaidAmount() {
@@ -358,6 +409,8 @@ class _SimpleInventoryFlowScreenState
                                 final product = products[index];
                                 final stock = _stock[product] ?? 0;
                                 final unit = _productUnits[product] ?? '';
+                                final productRecord = _resolveProductByName(product);
+                                final mrp = _salePriceForProduct(productRecord);
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
                                   leading: const CircleAvatar(
@@ -369,9 +422,10 @@ class _SimpleInventoryFlowScreenState
                                   ),
                                   title: Text(product),
                                   subtitle: Text(
-                                    unit.isEmpty
-                                        ? 'Stock: $stock'
-                                        : 'Stock: $stock $unit',
+                                    [
+                                      if (unit.isEmpty) 'Stock: $stock' else 'Stock: $stock $unit',
+                                      if (mrp > 0) 'MRP: ${_formatMoneyText(mrp)}',
+                                    ].join('  •  '),
                                   ),
                                   onTap: () => Navigator.pop(context, product),
                                 );
@@ -417,6 +471,7 @@ class _SimpleInventoryFlowScreenState
               TextField(
                 controller: mobileController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: phoneNumberInputFormatters(),
                 decoration: const InputDecoration(
                   labelText: 'Mobile number optional',
                   prefixIcon: Icon(Icons.phone_outlined),
@@ -481,6 +536,7 @@ class _SimpleInventoryFlowScreenState
               TextField(
                 controller: mobileController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: phoneNumberInputFormatters(),
                 decoration: const InputDecoration(
                   labelText: 'Mobile number optional',
                   prefixIcon: Icon(Icons.phone_outlined),
@@ -810,15 +866,14 @@ class _SimpleInventoryFlowScreenState
     final buyPrice = double.tryParse(_buyPriceController.text.trim()) ?? 0;
     final paidAmount = double.tryParse(_paidAmountController.text.trim()) ?? 0;
 
-    if (invoiceNo.isEmpty ||
-        product == null ||
+    if (product == null ||
         quantity <= 0 ||
         buyPrice <= 0) {
-      _showMessage('Please enter invoice no, product, quantity and buy price.');
+      _showMessage('Please select product, quantity and buy price.');
       return;
     }
 
-    final selectedProduct = _productsByName[product];
+    final selectedProduct = _resolveProductByName(product);
     if (selectedProduct == null) {
       _showMessage('Please select a valid product from list.');
       return;
@@ -839,7 +894,7 @@ class _SimpleInventoryFlowScreenState
     setState(() => _isSaving = true);
     final data = {
       'vendorId': _selectedSupplierId,
-      'invoiceNumber': invoiceNo,
+      'invoiceNumber': invoiceNo.isEmpty ? null : invoiceNo,
       'purchaseDate': DateTime.now().toIso8601String(),
       'paidAmount': paidAmount,
       'notes': null,
@@ -848,8 +903,8 @@ class _SimpleInventoryFlowScreenState
           'productId': selectedProduct.id,
           'quantity': quantity,
           'purchasePrice': buyPrice,
-          'mrp': selectedProduct.sellingPrice > 0
-              ? selectedProduct.sellingPrice
+          'mrp': _salePriceForProduct(selectedProduct) > 0
+              ? _salePriceForProduct(selectedProduct)
               : buyPrice,
           'expiryDate': expiryDate?.toIso8601String(),
         },
@@ -979,6 +1034,7 @@ class _SimpleInventoryFlowScreenState
     _sellPriceController.clear();
     _sellPaidAmountController.clear();
     _lastSuggestedSalePaidAmount = '';
+    _lastSuggestedSalePrice = '';
 
     final dueText = due > 0 ? ' Customer due: ${due.toStringAsFixed(0)}.' : '';
     _showMessage(
@@ -1118,6 +1174,10 @@ class _SimpleInventoryFlowScreenState
       _productsByName[product.name] = product;
       _stock[product.name] = product.totalStock;
       _productUnits[product.name] = product.unit;
+    }
+    if (_selectedSaleProduct != null) {
+      final refreshedProduct = _resolveProductByName(_selectedSaleProduct!);
+      _applySelectedSalePrice(refreshedProduct);
     }
     for (final supplier in suppliers) {
       if (_localSuppliers.every((item) => item.id != supplier.id)) {

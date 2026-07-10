@@ -72,6 +72,7 @@ dependencies:
   # PDF & File
   path_provider: ^2.1.5
   open_filex: ^4.4.0
+  share_plus: ^10.0.2
 
   # Permission & Device
   permission_handler: ^11.4.0

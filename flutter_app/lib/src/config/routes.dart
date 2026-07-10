@@ -30,7 +30,6 @@ import '../features/customer/presentation/screens/customers_screen.dart';
 import '../features/customer/presentation/screens/receive_payment_screen.dart';
 import '../features/vendor/presentation/screens/add_edit_vendor_screen.dart';
 import '../features/vendor/presentation/screens/vendor_detail_screen.dart';
-import '../features/purchase/presentation/screens/create_purchase_screen.dart';
 import '../features/purchase/presentation/screens/purchase_detail_screen.dart';
 import '../features/purchase/presentation/screens/purchase_list_screen.dart';
 import '../features/purchase/presentation/screens/purchase_return_screen.dart';
@@ -40,8 +39,6 @@ import '../features/sale/presentation/screens/create_sale_return_screen.dart';
 import '../features/sale/presentation/screens/sale_detail_screen.dart';
 import '../features/sale/presentation/screens/sale_return_detail_screen.dart';
 import '../features/sale/presentation/screens/sales_history_screen.dart';
-import '../features/sale/presentation/screens/sales_screen.dart';
-import '../features/sale/presentation/screens/select_customer_screen.dart';
 import '../features/super_admin/presentation/screens/add_edit_company_screen.dart';
 import '../features/super_admin/presentation/screens/add_edit_plan_screen.dart';
 import '../features/super_admin/presentation/screens/assign_plan_screen.dart';
@@ -71,7 +68,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final isSplash = state.matchedLocation == AppRoutes.splash;
       final isOnboarding = state.matchedLocation == AppRoutes.onboarding;
-      final isAuthRoute = state.matchedLocation == AppRoutes.chooseRole ||
+      final isAuthRoute =
+          state.matchedLocation == AppRoutes.chooseRole ||
           state.matchedLocation == AppRoutes.companyLogin ||
           state.matchedLocation == AppRoutes.companyRegister ||
           state.matchedLocation == AppRoutes.superAdminLogin ||
@@ -131,7 +129,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Not onboarded yet
-      if (!hasSeenOnboarding && !isSplash && !isOnboarding) {
+      if (!hasSeenOnboarding && !isSplash && !isOnboarding && !isAuthRoute) {
         return AppRoutes.onboarding;
       }
 
@@ -348,7 +346,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${AppRoutes.receivePayment}/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return ReceivePaymentScreen(customerId: id);
+          return ReceivePaymentScreen(
+            customerId: id,
+            sourceSaleId: state.uri.queryParameters['saleId'],
+          );
         },
       ),
       GoRoute(
@@ -389,15 +390,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.sales,
-        builder: (context, state) => const SalesScreen(),
+        builder: (context, state) =>
+            const SimpleInventoryFlowScreen(initialMode: 'sell'),
       ),
       GoRoute(
         path: AppRoutes.salesHistory,
         builder: (context, state) => const SalesHistoryScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.selectSaleCustomer,
-        builder: (context, state) => const SelectCustomerScreen(),
       ),
       GoRoute(
         path: '${AppRoutes.saleDetail}/:id',
@@ -437,7 +435,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.addPurchase,
-        builder: (context, state) => const CreatePurchaseScreen(),
+        builder: (context, state) => const SimpleInventoryFlowScreen(initialMode: 'purchase'),
       ),
       GoRoute(
         path: '${AppRoutes.purchaseDetail}/:id',
@@ -448,17 +446,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.editPurchase}/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return CreatePurchaseScreen(purchaseId: id);
-        },
+        builder: (context, state) => const SimpleInventoryFlowScreen(initialMode: 'purchase'),
       ),
       GoRoute(
         path: '${AppRoutes.duplicatePurchase}/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return CreatePurchaseScreen(duplicatePurchaseId: id);
-        },
+        builder: (context, state) => const SimpleInventoryFlowScreen(initialMode: 'purchase'),
       ),
       GoRoute(
         path: '${AppRoutes.purchaseReturn}/:id',

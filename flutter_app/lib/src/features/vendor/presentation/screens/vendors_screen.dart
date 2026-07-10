@@ -29,147 +29,53 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
   @override
   Widget build(BuildContext context) {
     final vendorsAsync = ref.watch(vendorsProvider);
-
-    final count = vendorsAsync.valueOrNull?.length ?? 0;
-
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.onSurface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.dashboard),
+        ),
+        title: const Text('Suppliers'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => context.push(AppRoutes.addVendor),
+            tooltip: 'Create Supplier',
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(vendorsProvider),
-        child: CustomScrollView(
+        child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 112,
-              pinned: true,
-              backgroundColor: AppColors.primary,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => context.go(AppRoutes.dashboard),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  onPressed: () => context.push(AppRoutes.addVendor),
-                  tooltip: 'Create Supplier',
-                ),
-                const SizedBox(width: 4),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24),
-                    ),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 56, 16, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Suppliers',
-                            style: context.textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '$count suppliers',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.outline.withValues(alpha: 0.25),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      final current = ref.read(vendorFilterProvider);
-                      ref.read(vendorFilterProvider.notifier).state = current.copyWith(
-                        search: value.isEmpty ? null : value,
-                      );
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search supplier...',
-                      hintStyle: TextStyle(
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
-                        fontSize: 13,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: AppColors.onSurfaceVariant,
-                        size: 20,
-                      ),
-                      suffixIcon: ref.watch(vendorFilterProvider).search != null
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              color: AppColors.onSurfaceVariant,
-                              onPressed: () {
-                                _searchController.clear();
-                                ref.read(vendorFilterProvider.notifier).state = VendorFilter();
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            _buildSearchBox(context),
+            const SizedBox(height: 12),
             vendorsAsync.when(
               data: (vendors) {
-                if (vendors.isEmpty) {
-                  return SliverFillRemaining(child: _buildEmptyState());
-                }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                      child: _VendorTile(
-                        vendor: vendors[index],
+                if (vendors.isEmpty) return _buildEmptyState();
+                return Column(
+                  children: [
+                    for (final vendor in vendors) ...[
+                      _VendorTile(
+                        vendor: vendor,
                         onTap: () => context.push(
-                          '${AppRoutes.vendorDetail}/${vendors[index].id}',
+                          '${AppRoutes.vendorDetail}/${vendor.id}',
                         ),
                       ),
-                    ),
-                    childCount: vendors.length,
-                  ),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
                 );
               },
-              loading: () => SliverToBoxAdapter(child: _buildShimmerList()),
-              error: (error, _) => SliverFillRemaining(
+              loading: () => _buildShimmerList(),
+              error: (error, _) => Padding(
+                padding: const EdgeInsets.only(top: 120),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -192,7 +98,6 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
@@ -203,6 +108,60 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
         label: const Text(
           'Create Supplier',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBox(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          final current = ref.read(vendorFilterProvider);
+          ref.read(vendorFilterProvider.notifier).state = current.copyWith(
+            search: value.isEmpty ? null : value,
+          );
+        },
+        decoration: InputDecoration(
+          hintText: 'Search supplier...',
+          hintStyle: TextStyle(
+            color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+            fontSize: 13,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: AppColors.onSurfaceVariant,
+            size: 20,
+          ),
+          suffixIcon: ref.watch(vendorFilterProvider).search != null
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  color: AppColors.onSurfaceVariant,
+                  onPressed: () {
+                    _searchController.clear();
+                    ref.read(vendorFilterProvider.notifier).state =
+                        VendorFilter();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 13,
+          ),
         ),
       ),
     );
@@ -270,7 +229,8 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
               OutlinedButton.icon(
                 onPressed: () {
                   _searchController.clear();
-                  ref.read(vendorFilterProvider.notifier).state = VendorFilter();
+                  ref.read(vendorFilterProvider.notifier).state =
+                      VendorFilter();
                 },
                 icon: const Icon(Icons.clear, size: 18),
                 label: const Text('Clear Search'),
@@ -296,16 +256,13 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
     return Shimmer.fromColors(
       baseColor: AppColors.surface,
       highlightColor: AppColors.background,
-      child: ListView.builder(
-        itemCount: 6,
-        itemBuilder: (context, index) => _buildShimmerTile(),
-      ),
+      child: Column(children: List.generate(6, (_) => _buildShimmerTile())),
     );
   }
 
   Widget _buildShimmerTile() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -369,8 +326,9 @@ class _VendorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),

@@ -26,6 +26,9 @@ class SubscriptionExpiredScreen extends ConsumerStatefulWidget {
 }
 
 class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredScreen> {
+  static const String _supportMobile = '8308460607';
+  static const String _supportEmail = 'a553726d@gmail.com';
+
   Razorpay? _razorpay;
   bool _isRenewing = false;
   String? _errorMessage;
@@ -499,13 +502,72 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
                   .animate()
                   .fadeIn(delay: const Duration(milliseconds: 800)),
 
-              const Spacer(),
+              const SizedBox(height: 16),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.outline.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.contactSupport,
+                      style: context.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.call_outlined, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _supportMobile,
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.email_outlined, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _supportEmail,
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: const Duration(milliseconds: 900)),
+
+              const SizedBox(height: 12),
 
               Text(
                 '${l10n.needHelp} ${l10n.contactSupport}',
                 style: context.textTheme.labelSmall?.copyWith(
                   color: AppColors.onSurfaceVariant,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

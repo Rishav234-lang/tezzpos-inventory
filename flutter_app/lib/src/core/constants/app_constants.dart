@@ -44,7 +44,6 @@ class AppRoutes {
   static const String salesHistory = '/sales/history';
   static const String saleDetail = '/sales/detail';
   static const String billInvoice = '/sales/bill';
-  static const String selectSaleCustomer = '/sales/select-customer';
   static const String saleReturn = '/sales/return';
   static const String saleReturnDetail = '/sales/return-detail';
   static const String saleReturnsHistory = '/sales/returns';

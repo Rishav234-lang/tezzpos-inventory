@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../domain/entities/dashboard_stats.dart';
 import '../providers/dashboard_providers.dart';
+import '../../../purchase/presentation/providers/purchase_providers.dart';
+import '../../../sale/presentation/providers/sale_providers.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   final bool detailed;
@@ -35,6 +39,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await ref.read(dashboardStatsProvider(filter).future);
   }
 
+  Future<bool> _showExitConfirm(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Exit app?'),
+              content: const Text('Do you want to close TezzPOS now?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Exit'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  void _exitApp() {
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.fuchsia) {
+      SystemNavigator.pop();
+    }
+  }
+
+  void _openTodaySales() {
+    final start = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final end = start.add(const Duration(days: 1));
+    ref.read(saleFilterProvider.notifier).state = SaleFilter(
+      startDate: start,
+      endDate: end,
+    );
+    context.push(AppRoutes.salesHistory);
+  }
+
+  void _openTodayPurchases() {
+    final start = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final end = start.add(const Duration(days: 1));
+    ref.read(purchaseFilterProvider.notifier).state = PurchaseFilter(
+      startDate: DateFormat('yyyy-MM-dd').format(start),
+      endDate: DateFormat('yyyy-MM-dd').format(end),
+    );
+    context.push(AppRoutes.purchases);
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
@@ -45,84 +100,92 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final recentPurchasesAsync = ref.watch(recentPurchasesProvider(filter));
     final topProductsAsync = ref.watch(topSellingProductsProvider(filter));
 
-    if (!widget.detailed) {
-      return _buildSimpleDashboard(
-        context,
-        ref,
-        user?.name ?? 'Owner',
-        statsAsync,
-      );
-    }
-
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: AppColors.background,
-      drawer: _buildDrawer(context, ref),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        color: AppColors.primary,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: _buildHeader(context, ref, user?.name ?? 'Owner'),
-            ),
-            SliverToBoxAdapter(child: _buildSimpleFlowPreview(context)),
-            SliverToBoxAdapter(
-              child: statsAsync.when(
-                data: (stats) => _StatsGrid(stats: stats),
-                loading: () => const _StatsGridShimmer(),
-                error: (_, __) => const _StatsGrid(
-                  stats: DashboardStats(
-                    totalProducts: 0,
-                    totalVendors: 0,
-                    totalCustomers: 0,
-                    inventoryValue: 0,
-                    todaySales: 0,
-                    todaySalesCount: 0,
-                    monthlySales: 0,
-                    monthlySalesCount: 0,
-                    todayPurchases: 0,
-                    monthlyPurchases: 0,
-                    grossProfit: 0,
-                    pendingReceivables: 0,
-                    pendingPayables: 0,
-                    expiringSoonCount: 0,
-                    lowStockCount: 0,
-                    todaySalesTarget: 0,
+    final body = !widget.detailed
+        ? _buildSimpleDashboard(
+            context,
+            ref,
+            user?.name ?? 'Owner',
+            statsAsync,
+          )
+        : Scaffold(
+            key: _scaffoldKey,
+            backgroundColor: AppColors.background,
+            drawer: _buildDrawer(context, ref),
+            body: RefreshIndicator(
+              onRefresh: _refresh,
+              color: AppColors.primary,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildHeader(context, ref, user?.name ?? 'Owner'),
                   ),
-                ),
+                  SliverToBoxAdapter(child: _buildSimpleFlowPreview(context)),
+                  SliverToBoxAdapter(
+                    child: statsAsync.when(
+                      data: (stats) => _StatsGrid(stats: stats),
+                      loading: () => const _StatsGridShimmer(),
+                      error: (_, __) => const _StatsGrid(
+                        stats: DashboardStats(
+                          totalProducts: 0,
+                          totalVendors: 0,
+                          totalCustomers: 0,
+                          inventoryValue: 0,
+                          todaySales: 0,
+                          todaySalesCount: 0,
+                          monthlySales: 0,
+                          monthlySalesCount: 0,
+                          todayPurchases: 0,
+                          monthlyPurchases: 0,
+                          grossProfit: 0,
+                          pendingReceivables: 0,
+                          pendingPayables: 0,
+                          expiringSoonCount: 0,
+                          lowStockCount: 0,
+                          todaySalesTarget: 0,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildSectionTitle(
+                      context,
+                      'Recent Transactions',
+                      route: AppRoutes.salesHistory,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildRecentTransactions(
+                      context,
+                      recentSalesAsync,
+                      recentPurchasesAsync,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildSectionTitle(
+                      context,
+                      'Top Selling Products',
+                      route: AppRoutes.products,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildTopProducts(context, topProductsAsync),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
               ),
             ),
-            SliverToBoxAdapter(
-              child: _buildSectionTitle(
-                context,
-                'Recent Transactions',
-                route: AppRoutes.salesHistory,
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: _buildRecentTransactions(
-                context,
-                recentSalesAsync,
-                recentPurchasesAsync,
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: _buildSectionTitle(
-                context,
-                'Top Selling Products',
-                route: AppRoutes.products,
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: _buildTopProducts(context, topProductsAsync),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNav(context, ref),
+            bottomNavigationBar: _buildBottomNav(context, ref),
+          );
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldExit = await _showExitConfirm(context);
+        if (shouldExit) _exitApp();
+      },
+      child: body,
     );
   }
 
@@ -209,7 +272,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: statsAsync.when(
-                data: (stats) => _SimpleTodaySummary(stats: stats),
+        data: (stats) => _SimpleTodaySummary(
+          stats: stats,
+          onSalesTap: _openTodaySales,
+          onPurchasesTap: _openTodayPurchases,
+        ),
                 loading: () => const _SimpleSummaryLoading(),
                 error: (_, __) => const _SimpleSummaryError(),
               ),
@@ -789,6 +856,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 context.go(AppRoutes.chooseRole);
               },
             ),
+            _DrawerAction(
+              icon: Icons.power_settings_new,
+              label: 'Exit App',
+              color: AppColors.error,
+              onTap: () async {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.pop(context);
+                }
+                final shouldExit = await _showExitConfirm(context);
+                if (shouldExit) _exitApp();
+              },
+            ),
           ],
         ),
       ),
@@ -798,8 +877,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 class _SimpleTodaySummary extends StatelessWidget {
   final DashboardStats stats;
+  final VoidCallback onSalesTap;
+  final VoidCallback onPurchasesTap;
 
-  const _SimpleTodaySummary({required this.stats});
+  const _SimpleTodaySummary({
+    required this.stats,
+    required this.onSalesTap,
+    required this.onPurchasesTap,
+  });
 
   String _money(double value) => 'Rs ${NumberFormat("#,##,##0").format(value)}';
 
@@ -843,6 +928,7 @@ class _SimpleTodaySummary extends StatelessWidget {
                   value: _money(stats.todaySales),
                   color: AppColors.primary,
                   icon: Icons.point_of_sale,
+                  onTap: onSalesTap,
                 ),
               ),
               const SizedBox(width: 10),
@@ -852,6 +938,7 @@ class _SimpleTodaySummary extends StatelessWidget {
                   value: _money(stats.todayPurchases),
                   color: AppColors.success,
                   icon: Icons.add_shopping_cart,
+                  onTap: onPurchasesTap,
                 ),
               ),
             ],
@@ -889,43 +976,79 @@ class _SimpleMetric extends StatelessWidget {
   final String value;
   final Color color;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const _SimpleMetric({
     required this.label,
     required this.value,
     required this.color,
     required this.icon,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+    final tappable = onTap != null;
+    return MouseRegion(
+      cursor: tappable ? SystemMouseCursors.click : MouseCursor.defer,
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.onSurface,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withValues(alpha: 0.12)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: color, size: 22),
+                    const Spacer(),
+                    if (tappable)
+                      Icon(
+                        Icons.chevron_right,
+                        color: color.withValues(alpha: 0.8),
+                        size: 18,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                if (tappable) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Tap to open',
+                    style: context.textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          Text(
-            label,
-            style: context.textTheme.labelSmall?.copyWith(
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1104,10 +1227,20 @@ class _SimpleManagePanel extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Open lists and settings when needed.',
+            'Follow these steps to manage the shop in order.',
             style: context.textTheme.bodySmall?.copyWith(
               color: AppColors.onSurfaceVariant,
             ),
+          ),
+          const SizedBox(height: 12),
+          _ManageTile(
+            label: 'Stock',
+            icon: Icons.warehouse_outlined,
+            color: AppColors.warning,
+            onTap: onStock,
+            step: null,
+            fullWidth: true,
+            subtitle: 'Open stock list and current quantity',
           ),
           const SizedBox(height: 12),
           GridView.count(
@@ -1116,37 +1249,39 @@ class _SimpleManagePanel extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 2.4,
+            childAspectRatio: 1.95,
             children: [
               _ManageTile(
-                label: 'Products',
-                icon: Icons.inventory_2_outlined,
-                color: AppColors.success,
-                onTap: onProducts,
-              ),
-              _ManageTile(
-                label: 'Stock',
-                icon: Icons.warehouse_outlined,
-                color: AppColors.warning,
-                onTap: onStock,
-              ),
-              _ManageTile(
-                label: 'Customers',
-                icon: Icons.people_outline,
-                color: AppColors.info,
-                onTap: onCustomers,
-              ),
-              _ManageTile(
-                label: 'Suppliers',
-                icon: Icons.local_shipping_outlined,
-                color: AppColors.warning,
-                onTap: onSuppliers,
-              ),
-              _ManageTile(
+                step: 1,
                 label: 'Categories',
                 icon: Icons.category_outlined,
                 color: AppColors.primary,
                 onTap: onCategories,
+                subtitle: 'Create groups first',
+              ),
+              _ManageTile(
+                step: 2,
+                label: 'Products',
+                icon: Icons.inventory_2_outlined,
+                color: AppColors.success,
+                onTap: onProducts,
+                subtitle: 'Add items under groups',
+              ),
+              _ManageTile(
+                step: 3,
+                label: 'Suppliers',
+                icon: Icons.local_shipping_outlined,
+                color: AppColors.warning,
+                onTap: onSuppliers,
+                subtitle: 'Vendor details',
+              ),
+              _ManageTile(
+                step: 4,
+                label: 'Customers',
+                icon: Icons.people_outline,
+                color: AppColors.info,
+                onTap: onCustomers,
+                subtitle: 'Buyer details',
               ),
             ],
           ),
@@ -1161,12 +1296,18 @@ class _ManageTile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final int? step;
+  final String? subtitle;
+  final bool fullWidth;
 
   const _ManageTile({
     required this.label,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.step,
+    this.subtitle,
+    this.fullWidth = false,
   });
 
   @override
@@ -1178,28 +1319,71 @@ class _ManageTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          width: fullWidth ? double.infinity : null,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.outline.withValues(alpha: 0.4)),
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: color.withValues(alpha: 0.1),
-                foregroundColor: color,
-                child: Icon(icon, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+              if (step != null) ...[
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$step',
+                    style: context.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 10),
+              ] else ...[
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  foregroundColor: color,
+                  child: Icon(icon, size: 20),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
               ),
             ],
           ),
@@ -1208,7 +1392,6 @@ class _ManageTile extends StatelessWidget {
     );
   }
 }
-
 class _StatsGrid extends StatelessWidget {
   final DashboardStats stats;
 

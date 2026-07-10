@@ -311,7 +311,9 @@ class SaleDetailScreen extends ConsumerWidget {
           const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => context.push('${AppRoutes.receivePayment}/${sale.customer?.id ?? ''}'),
+              onPressed: () => context.push(
+                '${AppRoutes.receivePayment}/${sale.customer?.id ?? ''}?saleId=$saleId',
+              ),
               icon: const Icon(Icons.payment, size: 18),
               label: const Text('Payment'),
               style: OutlinedButton.styleFrom(

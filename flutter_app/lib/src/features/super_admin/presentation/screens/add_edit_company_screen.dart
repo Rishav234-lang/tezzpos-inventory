@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../providers/super_admin_providers.dart';
 
 class AddEditCompanyScreen extends ConsumerStatefulWidget {
@@ -139,7 +141,7 @@ class _AddEditCompanyScreenState extends ConsumerState<AddEditCompanyScreen> {
                       const SizedBox(height: 12),
                       _buildTextField('Company Name', _nameController, validator: (v) => v?.isEmpty == true ? 'Required' : null),
                       _buildTextField('Email', _emailController, keyboardType: TextInputType.emailAddress, validator: (v) => v?.contains('@') == true ? null : 'Valid email required'),
-                      _buildTextField('Phone', _phoneController, keyboardType: TextInputType.phone, validator: (v) => v?.isEmpty == true ? 'Required' : null),
+                      _buildTextField('Phone', _phoneController, keyboardType: TextInputType.phone, inputFormatters: phoneNumberInputFormatters(), validator: (v) => v?.isEmpty == true ? 'Required' : null),
                       _buildTextField('Address', _addressController, maxLines: 2),
                       _buildTextField('GST Number', _gstController),
                       const SizedBox(height: 24),
@@ -181,6 +183,7 @@ class _AddEditCompanyScreenState extends ConsumerState<AddEditCompanyScreen> {
     TextInputType? keyboardType,
     int maxLines = 1,
     bool obscureText = false,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return Padding(
@@ -188,6 +191,7 @@ class _AddEditCompanyScreenState extends ConsumerState<AddEditCompanyScreen> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         maxLines: maxLines,
         obscureText: obscureText,
         validator: validator,

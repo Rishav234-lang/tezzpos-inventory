@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/constants/api_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/extensions.dart';
+import '../../../../core/utils/invoice_pdf_helper.dart';
+import '../../../../config/providers.dart';
 import '../providers/sale_providers.dart';
 
 class BillInvoiceScreen extends ConsumerWidget {
@@ -28,7 +29,9 @@ class BillInvoiceScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () => _shareInvoice(context),
+            onPressed: saleAsync.hasValue
+                ? () => _shareInvoice(context, ref, saleAsync.value!)
+                : null,
           ),
         ],
       ),
@@ -76,9 +79,11 @@ class BillInvoiceScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton.icon(
-                onPressed: () => _downloadPdf(context),
-                icon: const Icon(Icons.print, size: 18),
-                label: const Text('Print / Save'),
+                onPressed: saleAsync.hasValue
+                    ? () => _downloadPdf(context, ref, saleAsync.value!)
+                    : null,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Download PDF'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -253,13 +258,62 @@ class BillInvoiceScreen extends ConsumerWidget {
     );
   }
 
-  void _shareInvoice(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Share coming soon')));
+  Future<void> _shareInvoice(BuildContext context, WidgetRef ref, sale) async {
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/sales/$saleId/pdf',
+      );
+      final result = await InvoicePdfHelper.sharePdf(
+        bytes: bytes,
+        filename: 'INV-${sale.invoiceNumber}.pdf',
+        subject: 'Invoice ${sale.invoiceNumber}',
+        text:
+            'Invoice ${sale.invoiceNumber} for ${sale.customer?.name ?? 'Customer'} - Rs ${sale.totalAmount.toStringAsFixed(2)}',
+      );
+      if (!context.mounted) return;
+      final message = result == InvoiceShareResult.shared
+          ? 'Invoice shared successfully'
+          : 'Sharing is not available here. PDF downloaded instead.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Share failed: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
-  void _downloadPdf(BuildContext context) {
-    final url = '${ApiConstants.baseUrl}${ApiConstants.invoices}/sales/$saleId/preview';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF: $url')));
+  Future<void> _downloadPdf(BuildContext context, WidgetRef ref, sale) async {
+    try {
+      final dio = ref.read(dioProvider).dio;
+      final bytes = await InvoicePdfHelper.fetchPdfBytes(
+        dio: dio,
+        endpoint: '/api/invoices/sales/$saleId/pdf',
+      );
+      await InvoicePdfHelper.downloadPdf(
+        bytes: bytes,
+        filename: 'INV-${sale.invoiceNumber}.pdf',
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice PDF ready')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Download failed: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 }
 

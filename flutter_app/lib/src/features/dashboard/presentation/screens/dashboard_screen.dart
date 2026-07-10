@@ -853,7 +853,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               color: AppColors.error,
               onTap: () {
                 ref.read(authNotifierProvider.notifier).logout();
-                context.go(AppRoutes.chooseRole);
+                context.go(AppRoutes.companyLogin);
               },
             ),
             _DrawerAction(
@@ -1035,16 +1035,6 @@ class _SimpleMetric extends StatelessWidget {
                     color: AppColors.onSurfaceVariant,
                   ),
                 ),
-                if (tappable) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Tap to open',
-                    style: context.textTheme.labelSmall?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1243,47 +1233,58 @@ class _SimpleManagePanel extends StatelessWidget {
             subtitle: 'Open stock list and current quantity',
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.95,
-            children: [
-              _ManageTile(
-                step: 1,
-                label: 'Categories',
-                icon: Icons.category_outlined,
-                color: AppColors.primary,
-                onTap: onCategories,
-                subtitle: 'Create groups first',
-              ),
-              _ManageTile(
-                step: 2,
-                label: 'Products',
-                icon: Icons.inventory_2_outlined,
-                color: AppColors.success,
-                onTap: onProducts,
-                subtitle: 'Add items under groups',
-              ),
-              _ManageTile(
-                step: 3,
-                label: 'Suppliers',
-                icon: Icons.local_shipping_outlined,
-                color: AppColors.warning,
-                onTap: onSuppliers,
-                subtitle: 'Vendor details',
-              ),
-              _ManageTile(
-                step: 4,
-                label: 'Customers',
-                icon: Icons.people_outline,
-                color: AppColors.info,
-                onTap: onCustomers,
-                subtitle: 'Buyer details',
-              ),
-            ],
+          Text(
+            'Flow Setup',
+            style: context.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Set these up in order so daily purchase and sales stay simple.',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _ManageTile(
+            step: 1,
+            label: 'Categories',
+            icon: Icons.category_outlined,
+            color: AppColors.primary,
+            onTap: onCategories,
+            subtitle: 'Create groups first',
+            fullWidth: true,
+          ),
+          const SizedBox(height: 10),
+          _ManageTile(
+            step: 2,
+            label: 'Products',
+            icon: Icons.inventory_2_outlined,
+            color: AppColors.success,
+            onTap: onProducts,
+            subtitle: 'Add items under groups',
+            fullWidth: true,
+          ),
+          const SizedBox(height: 10),
+          _ManageTile(
+            step: 3,
+            label: 'Suppliers',
+            icon: Icons.local_shipping_outlined,
+            color: AppColors.warning,
+            onTap: onSuppliers,
+            subtitle: 'Vendor details',
+            fullWidth: true,
+          ),
+          const SizedBox(height: 10),
+          _ManageTile(
+            step: 4,
+            label: 'Customers',
+            icon: Icons.people_outline,
+            color: AppColors.info,
+            onTap: onCustomers,
+            subtitle: 'Buyer details',
+            fullWidth: true,
           ),
         ],
       ),

@@ -83,7 +83,7 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.logout_rounded,
                       onTap: () async {
                         await ref.read(authNotifierProvider.notifier).logout();
-                        if (context.mounted) context.go(AppRoutes.chooseRole);
+                        if (context.mounted) context.go(AppRoutes.companyLogin);
                       },
                     ),
                   ],

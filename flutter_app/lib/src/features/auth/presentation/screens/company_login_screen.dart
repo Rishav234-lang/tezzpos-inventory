@@ -245,19 +245,6 @@ class _CompanyLoginScreenState extends ConsumerState<CompanyLoginScreen> {
                   )
                       .animate()
                       .fadeIn(delay: const Duration(milliseconds: 800)),
-
-                  const SizedBox(height: 8),
-
-                  // Switch to super admin
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () => context.pushReplacement(AppRoutes.superAdminLogin),
-                      icon: const Icon(Icons.admin_panel_settings_rounded, size: 20),
-                      label: Text(l10n.loginAsSuperAdmin),
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(delay: const Duration(milliseconds: 900)),
                 ],
               ),
             ),

@@ -281,7 +281,7 @@ class _SubscriptionExpiredScreenState extends ConsumerState<SubscriptionExpiredS
 
   Future<void> _logout() async {
     await ref.read(authNotifierProvider.notifier).logout();
-    if (mounted) context.go(AppRoutes.chooseRole);
+    if (mounted) context.go(AppRoutes.companyLogin);
   }
 
   @override

@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/app_constants.dart';
-import '../features/auth/presentation/screens/choose_role_screen.dart';
 import '../features/auth/presentation/screens/company_login_screen.dart';
-import '../features/auth/presentation/screens/super_admin_login_screen.dart';
 import '../features/auth/presentation/screens/company_registration_screen.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/subscription/presentation/screens/subscription_expired_screen.dart';
@@ -89,6 +87,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Still loading auth state - stay on splash
       if (authState.isLoading) return isSplash ? null : AppRoutes.splash;
 
+      // Keep the visible auth flow focused on company login only.
+      if (!isAuthenticated &&
+          (state.matchedLocation == AppRoutes.chooseRole ||
+              state.matchedLocation == AppRoutes.superAdminLogin)) {
+        return AppRoutes.companyLogin;
+      }
+
       // Check subscription expiry for owner
       final user = authState.valueOrNull?.user;
       final isOwner = user?.isOwner ?? false;
@@ -135,7 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Unauthenticated user trying to access protected pages
       if (!isAuthenticated && !isAuthRoute && !isSplash && !isOnboarding) {
-        return AppRoutes.chooseRole;
+        return AppRoutes.companyLogin;
       }
 
       // Role-based access control
@@ -162,7 +167,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.chooseRole,
-        builder: (context, state) => const ChooseRoleScreen(),
+        builder: (context, state) => const CompanyLoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.companyLogin,
@@ -174,7 +179,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.superAdminLogin,
-        builder: (context, state) => const SuperAdminLoginScreen(),
+        builder: (context, state) => const CompanyLoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,

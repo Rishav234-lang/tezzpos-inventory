@@ -64,7 +64,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_complete', true);
     if (mounted) {
-      context.go(AppRoutes.chooseRole);
+      context.go(AppRoutes.companyLogin);
     }
   }
 

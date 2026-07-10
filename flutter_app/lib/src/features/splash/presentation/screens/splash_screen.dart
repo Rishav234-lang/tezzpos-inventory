@@ -59,7 +59,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     } else if (!hasSeenOnboarding) {
       context.go(AppRoutes.onboarding);
     } else {
-      context.go(AppRoutes.chooseRole);
+      context.go(AppRoutes.companyLogin);
     }
   }
 
